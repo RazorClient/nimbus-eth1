@@ -68,6 +68,26 @@ template withSender(txs: openArray[Transaction], body: untyped) =
 
       body
 
+#TODO wire this in properly
+proc extractAuthorities(vmState: BaseVMState, tx: Transaction): seq[Address] =
+  ## Extract which authorities successfully set code in EIP-7702 transaction
+  ## Returns addresses that had valid authorizations and successfully delegated code
+  var authorities: seq[Address] = @[]
+  if tx.txType != TxEip7702 or tx.authorizationList.len == 0:
+    return authorities
+
+  for auth in tx.authorizationList:
+    # TODO
+    try:
+      let authorityAddr = auth.address
+      let code = vmState.ledger.getCode(authorityAddr)
+      # if code.len == 23 and code[0] == 0xef'u8 and code[1] == 0x01'u8:
+      authorities.add(authorityAddr)
+    except CatchableError:
+      continue
+
+  authorities
+
 # Factored this out of procBlkPreamble so that it can be used directly for
 # stateless execution of specific transactions.
 proc processTransactions*(
@@ -82,9 +102,15 @@ proc processTransactions*(
   vmState.cumulativeGasUsed = 0
   vmState.allLogs = @[]
 
+  # Initialize SSZ receipt contexts for post-EIP7807
+  if vmState.fork >= FkEip7807 and not skipReceipts:
+    vmState.sszReceiptContexts.setLen(transactions.len)
+
   withSender(transactions):
     if sender == default(Address):
       return err("Could not get sender for tx with index " & $(txIndex))
+
+    let previousCumulativeGas = vmState.cumulativeGasUsed
 
     let rc = vmState.processTransaction(tx, sender, header)
     if rc.isErr:
@@ -95,7 +121,13 @@ proc processTransactions*(
       if collectLogs:
         vmState.allLogs.add rc.value.logEntries
     else:
-      vmState.receipts[txIndex] = vmState.makeReceipt(tx.txType, rc.value)
+        vmState.receipts[txIndex] = vmState.makeReceipt(
+        tx,
+        sender,
+        tx.txType,
+        rc.value,
+        previousCumulativeGas
+      )
       if collectLogs:
         vmState.allLogs.add vmState.receipts[txIndex].logs
   ok()

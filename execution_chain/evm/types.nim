@@ -15,7 +15,8 @@ import
   ./interpreter/[gas_costs, op_codes],
   ./transient_storage,
   ../db/ledger,
-  ../common/[common, evmforks]
+  ../common/[common, evmforks],
+  ../utils/receipts_context,
 
 export stack, memory, transient_storage
 
@@ -55,7 +56,8 @@ type
     blobGasUsed*      : uint64
     allLogs*          : seq[Log] # EIP-6110
     gasRefunded*      : int64    # Global gasRefunded counter
-
+    receiptContexts*: seq[ReceiptContext] # EIP-6466: SSZ receipt context
+    
   Computation* = ref object
     # The execution computation
     vmState*:               BaseVMState

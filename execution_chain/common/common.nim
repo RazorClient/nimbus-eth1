@@ -424,7 +424,7 @@ proc resolveFinHash*(com: CommonRef; fin: Hash32) =
 # Getters
 # ------------------------------------------------------------------------------
 
-func startOfHistory*(com: CommonRef): Hash32 =c
+func startOfHistory*(com: CommonRef): Hash32 =
   ## Getter
   com.startOfHistory
 

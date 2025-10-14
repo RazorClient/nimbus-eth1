@@ -62,6 +62,24 @@ proc makeReceipt*(
   rec.receiptType = txType
   rec.cumulativeGasUsed = vmState.cumulativeGasUsed
   assign(rec.logs, callResult.logEntries)
+
+    # Capture SSZ receipt context if post-EIP7807
+  if vmState.fork >= FkEip7807:
+    let txGasUsed = uint64(vmState.cumulativeGasUsed - previousCumulativeGas)
+    let contractAddr = if tx.contractCreation():
+      generateAddress(sender, tx.nonce)
+    else:
+      default(Address)
+    let authorities = if tx.txType == TxEip7702:
+      extractAuthorities(vmState, tx)
+    else:
+      @[]
+    vmState.receiptContexts.add(ReceiptContext(
+      sender: sender,
+      txGasUsed: txGasUsed,
+      contractAddress: contractAddr,
+      authorities: authorities
+    ))
   rec
 
 # ------------------------------------------------------------------------------
