@@ -383,6 +383,9 @@ func isOsakaOrLater*(com: CommonRef, t: EthTime): bool =
 func isAmsterdamOrLater*(com: CommonRef, t: EthTime): bool =
   com.config.amsterdamTime.isSome and t >= com.config.amsterdamTime.value
 
+func iseip7807OrLater*(com: CommonRef, t: EthTime): bool =
+  com.config.eip7807Time.isSome and t >= com.config.eip7807Time.value
+
 proc proofOfStake*(com: CommonRef, header: Header, txFrame: CoreDbTxRef): bool =
   if com.config.posBlock.isSome:
     # see comments of posBlock in common/hardforks.nim
@@ -421,7 +424,7 @@ proc resolveFinHash*(com: CommonRef; fin: Hash32) =
 # Getters
 # ------------------------------------------------------------------------------
 
-func startOfHistory*(com: CommonRef): Hash32 =
+func startOfHistory*(com: CommonRef): Hash32 =c
   ## Getter
   com.startOfHistory
 

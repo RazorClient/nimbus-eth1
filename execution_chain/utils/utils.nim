@@ -28,6 +28,26 @@ const
 template calcTxRoot*(transactions: openArray[Transaction]): Root =
   orderedTrieRoot(transactions)
 
+proc calcTxRoot*(
+    transactions: openArray[Transaction],
+    fork: EVMFork
+): Root =
+  ##  transactions root calculation (EIP-7807)
+  if fork >= FkEip7807:
+    sszCalcTxRoot(transactions)
+  else:
+    orderedTrieRoot(transactions)
+
+proc calcWithdrawalsRoot*(
+  withdrawals: openArray[Withdrawal],
+  fork: EVMFork
+): Root =
+##  withdrawals root calculation (EIP-6465)
+  if fork >= FkEip7807:
+    sszCalcWithdrawalsRoot(withdrawals)
+  else:
+    orderedTrieRoot(withdrawals)
+
 template calcWithdrawalsRoot*(withdrawals: openArray[Withdrawal]): Root =
   orderedTrieRoot(withdrawals)
 
@@ -37,6 +57,20 @@ template calcReceiptsRoot*(receipts: openArray[StoredReceipt]): Root =
 
 template calcReceiptsRoot*(receipts: openArray[Receipt]): Root =
   orderedTrieRoot(receipts)
+
+proc calcReceiptsRoot*(
+    receipts: openArray[ReceiptContext],
+    fork: EVMFork
+): Root =
+  ## Fork-aware receipts root calculation (EIP-6466)
+  ## Uses SSZ merkle tree post-Amsterdam, RLP MPT pre-fork
+  if fork >= FkEip7807:
+    sszCalcReceiptsRoot(receipts)
+  else:
+    # For pre-fork, just use regular RLP receipts
+    let rlpReceipts = receipts.mapIt(it.receipt)
+    let recs = rlpReceipts.to(seq[Receipt])
+    orderedTrieRoot(recs)
 
 func calcRequestsHash*(requests: varargs[tuple[reqType: byte, data: seq[byte]]]): Hash32 =
   func calcHash(reqType: byte, data: openArray[byte]): Hash32 =
