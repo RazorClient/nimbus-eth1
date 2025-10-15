@@ -16,7 +16,9 @@ import
   stew/byteutils,
   stew/assign2,
   nimcrypto/sha2,
-  ../constants
+  ../constants,
+  ../common/evmforks,
+  ./ssz_utils
 
 export eth_types_rlp
 
@@ -42,7 +44,7 @@ proc calcWithdrawalsRoot*(
   withdrawals: openArray[Withdrawal],
   fork: EVMFork
 ): Root =
-##  withdrawals root calculation (EIP-6465)
+  ##  withdrawals root calculation (EIP-6465)
   if fork >= FkEip7807:
     sszCalcWithdrawalsRoot(withdrawals)
   else:

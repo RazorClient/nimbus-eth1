@@ -91,8 +91,13 @@ proc sszCalcReceiptsRoot*(
   sszReceipts.hash_tree_root()
 
 proc sszCalcWithdrawalsRoot*(withdrawals: openArray[Withdrawal]): Root =
-    if withdrawals.len == 0:
+  if withdrawals.len == 0:
     return default(Root)
+  var sszW: seq[blocks_ssz.Withdrawal] = @[]
+  sszW.setLen(withdrawals.len)
+  for i, w in withdrawals:
+    sszW[i] = toSszWithdrawal(w)
+  Root(sszW.hash_tree_root())
 
 proc sszCalcSystemLogsRoot*(logs: openArray[Log]): Root =
   if logs.len == 0:
