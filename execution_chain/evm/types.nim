@@ -24,6 +24,12 @@ type
   VMFlag* = enum
     ExecutionOK
 
+  ReceiptContext* = object
+    sender*: Address
+    txGasUsed*: uint64 # Gas used by THIS transaction only (not cumulative)
+    contractAddress*: Address
+    authorities*: seq[Address]
+
   BlockContext* = object
     timestamp*        : EthTime
     gasLimit*         : GasInt
@@ -57,7 +63,9 @@ type
     allLogs*          : seq[Log] # EIP-6110
     gasRefunded*      : int64    # Global gasRefunded counter
     receiptContexts*: seq[ReceiptContext] # EIP-6466: SSZ receipt context
-    
+    currentTxAuthorities*: seq[Address]
+    isCreate*        : bool
+
   Computation* = ref object
     # The execution computation
     vmState*:               BaseVMState

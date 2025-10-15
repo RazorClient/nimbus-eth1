@@ -156,7 +156,7 @@ proc newPayload*(ben: BeaconEngineRef,
     requestsHash = calcRequestsHash(executionRequests)
     blk =
       try:
-        ethBlock(payload, beaconRoot, requestsHash)
+        ethBlock(payload, beaconRoot, requestsHash, com)
       except RlpError as e:
         warn "Failed to decode payload",
           error = e.msg

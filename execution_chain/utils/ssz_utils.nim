@@ -10,6 +10,7 @@ export receipts_ssz, transaction_ssz, blocks_ssz, sszcodec
 
 # SSZ helper functions for EIP-6465 (transactions), EIP-6466 (receipts),
 # and EIP-7807 (SSZ block structure)
+
 proc sszCalcTxRoot*(transactions: openArray[Transaction]): Root =
 
   if transactions.len == 0:
@@ -21,7 +22,7 @@ proc sszCalcTxRoot*(transactions: openArray[Transaction]): Root =
     sszTxs.add(toSszTx(tx))
 
   # Compute SSZ merkle root
-  result = sszTxs.hash_tree_root()
+  sszTxs.hash_tree_root()
 
 proc sszCalcReceiptsRoot*(
     receipts: openArray[StoredReceipt],
@@ -54,7 +55,7 @@ proc sszCalcReceiptsRoot*(
       ))
 
     # Determine receipt kind and create appropriate SSZ receipt
-    let sszReceipt = if rec.receiptType == TxEip7702 and ctx.authorities.len > 0:
+    let sszReceipt = if rec.receiptType == TxEip7702:
       let setCodeRec = eth_ssz_receipts.SetCodeReceipt(
         `from`: ctx.sender,
         gas_used: ctx.txGasUsed,
@@ -66,7 +67,7 @@ proc sszCalcReceiptsRoot*(
       eth_ssz_receipts.Receipt(kind: rSetCode, setcode: setCodeRec)
 
     # TODO:make sure this is ok and works
-    elif ctx.contractAddress != default(Address):
+    elif ctx.isCreate:
       let createRec = eth_ssz_receipts.CreateReceipt(
         `from`: ctx.sender,
         gas_used: ctx.txGasUsed,
@@ -87,8 +88,25 @@ proc sszCalcReceiptsRoot*(
       eth_ssz_receipts.Receipt(kind: rBasic, basic: basicRec)
 
     sszReceipts.add(sszReceipt)
-  result = sszReceipts.hash_tree_root()
+  sszReceipts.hash_tree_root()
 
 proc sszCalcWithdrawalsRoot*(withdrawals: openArray[Withdrawal]): Root =
     if withdrawals.len == 0:
     return default(Root)
+
+proc sszCalcSystemLogsRoot*(logs: openArray[Log]): Root =
+  if logs.len == 0:
+    return default(Root)
+
+  var sszLogs: seq[eth_ssz_receipts.Log]
+  for log in logs:
+    var topics: seq[Hash32]
+    for topic in log.topics:
+      topics.add(cast[Hash32](topic))
+    sszLogs.add(eth_ssz_receipts.Log(
+      address: log.address,
+      topics: List[Hash32, 4](topics),
+      data: log.data
+    ))
+
+  sszLogs.hash_tree_root()

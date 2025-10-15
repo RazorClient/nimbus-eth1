@@ -92,6 +92,7 @@ proc checkpoint*(p: var Persister): Result[void, string] =
       return err($$error)
 
     if p.parent.stateRoot != stateRoot:
+       let fork = p.com.toEVMFork(p.parent.timestamp)
       # TODO replace logging with better error
       debug "wrong state root in block",
         blockNumber = p.parent.number,
@@ -189,11 +190,13 @@ proc persistBlock*(p: var Persister, blk: Block): Result[void, string] =
       let executionWitness = ExecutionWitness.build(witness, vmState.ledger)
       ?executionWitness.statelessProcessBlock(com, blk)
 
-    ?vmState.ledger.txFrame.persistWitness(header.computeBlockHash(), witness)
+    let fork = com.toEVMFork(header.timestamp)
+    ?vmState.ledger.txFrame.persistWitness(header.computeBlockHash(header, fork), witness)
 
 
   if NoPersistHeader notin p.flags:
-    let blockHash = header.computeBlockHash()
+     let fork = com.toEVMFork(header.timestamp)
+    let blockHash = header.computeBlockHash(header, fork)
     ?txFrame.persistHeaderAndSetHead(blockHash, header, com.startOfHistory)
 
   if NoPersistTransactions notin p.flags:

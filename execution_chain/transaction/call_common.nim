@@ -70,6 +70,9 @@ proc preExecComputation(vmState: BaseVMState, call: CallParams): int64 =
   if not call.isCreate:
     ledger.incNonce(call.sender)
 
+  # Clear authorities from previous transaction
+  vmState.currentTxAuthorities.setLen(0)
+
   # EIP-7702
   for auth in call.authorizationList:
     # 1. Verify the chain id is either 0 or the chain's current ID.
@@ -109,6 +112,9 @@ proc preExecComputation(vmState: BaseVMState, call: CallParams): int64 =
 
     # 9. Increase the nonce of authority by one.
     ledger.setNonce(authority, auth.nonce + 1)
+
+    # Track this authority for SSZ receipt (EIP-6466)
+    vmState.currentTxAuthorities.add(authority)
 
   gasRefund
 

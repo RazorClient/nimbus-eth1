@@ -175,7 +175,7 @@ proc generateExecutionBundle*(ben: BeaconEngineRef,
       return err "extraData length should not exceed 32 bytes"
 
     ok ExecutionBundle(
-      payload: executionPayload(bundle.blk),
+      payload: executionPayload(bundle.blk,xp.com),
       blobsBundle: bundle.blobsBundle,
       blockValue: bundle.blockValue,
       executionRequests: bundle.executionRequests)

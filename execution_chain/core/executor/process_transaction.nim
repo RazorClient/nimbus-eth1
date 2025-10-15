@@ -54,6 +54,7 @@ proc commitOrRollbackDependingOnGasUsed(
   # header `gasUsed` and the `vmState.cumulativeGasUsed` at a later stage.
   if header.gasLimit < vmState.cumulativeGasUsed + gasUsed:
     vmState.ledger.rollback(accTx)
+    vmState.currentTxAuthorities.setLen(0)
     err(&"invalid tx: block header gasLimit reached. gasLimit={header.gasLimit}, gasUsed={vmState.cumulativeGasUsed}, addition={gasUsed}")
   else:
     # Accept transaction and collect mining fee.
@@ -108,7 +109,7 @@ proc processTransactionImpl(
   let
     com = vmState.com
     txRes = roDB.validateTransaction(tx, sender, header.gasLimit, baseFee256, excessBlobGas, com, fork)
-    res = if txRes.isOk:      
+    res = if txRes.isOk:
       # Execute the transaction.
       vmState.captureTxStart(tx.gasLimit)
       let

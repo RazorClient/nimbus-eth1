@@ -40,11 +40,13 @@ func wdRoot(x: Opt[seq[WithdrawalV1]]): Opt[Hash32] =
 func txRoot(list: openArray[Web3Tx]): Hash32 =
   orderedTrieRoot(list)
 
+
 # ------------------------------------------------------------------------------
 # Public functions
 # ------------------------------------------------------------------------------
 
-func executionPayload*(blk: Block): ExecutionPayload =
+func executionPayload*(blk: Block, com: CommonRef): ExecutionPayload =
+  let fork = com.toEVMFork(blk.header.timestamp)
   ExecutionPayload(
     parentHash   : blk.header.parentHash,
     feeRecipient : blk.header.coinbase,
@@ -65,7 +67,8 @@ func executionPayload*(blk: Block): ExecutionPayload =
     excessBlobGas: w3Qty blk.header.excessBlobGas,
   )
 
-func executionPayloadV1V2*(blk: Block): ExecutionPayloadV1OrV2 =
+func executionPayloadV1V2*(blk: Block, com: CommonRef): ExecutionPayloadV1OrV2 =
+  let fork = com.toEVMFork(blk.header.timestamp)
   ExecutionPayloadV1OrV2(
     parentHash   : blk.header.parentHash,
     feeRecipient : blk.header.coinbase,
@@ -86,8 +89,13 @@ func executionPayloadV1V2*(blk: Block): ExecutionPayloadV1OrV2 =
 
 func blockHeader*(p: ExecutionPayload,
                   parentBeaconBlockRoot: Opt[Hash32],
-                  requestsHash: Opt[Hash32]):
+                  requestsHash: Opt[Hash32],
+                  com: CommonRef):
                     Header =
+     timestamp = ethTime p.timestamp
+    fork = com.toEVMFork(timestamp)
+    transactions = ethTxs p.transactions
+    withdrawals = ethWithdrawals p.withdrawals
   Header(
     parentHash     : p.parentHash,
     ommersHash     : EMPTY_UNCLE_HASH,

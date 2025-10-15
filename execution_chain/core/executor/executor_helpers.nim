@@ -47,8 +47,20 @@ func createBloom*(receipts: openArray[StoredReceipt]): Bloom =
     bloom.value = bloom.value or logsBloom(rec.logs).value
   bloom.value.to(Bloom)
 
+proc extractAuthorities(vmState: BaseVMState): seq[Address] =
+ # Returns the list of authority addresses that had delegation code set
+ # during preExecComputation
+  vmState.currentTxAuthorities
+
 proc makeReceipt*(
-    vmState: BaseVMState; txType: TxType, callResult: LogResult): StoredReceipt =
+    vmState: BaseVMState;
+    sender: Address;
+    nonce: AccountNonce;
+    txType: TxType;
+    isCreate: bool;
+    callResult: LogResult;
+    previousCumulativeGas: GasInt  # For calculating per-tx gas
+): StoredReceipt =
   var rec: StoredReceipt
   if vmState.com.isByzantiumOrLater(vmState.blockNumber):
     rec.isHash = false
@@ -66,19 +78,21 @@ proc makeReceipt*(
     # Capture SSZ receipt context if post-EIP7807
   if vmState.fork >= FkEip7807:
     let txGasUsed = uint64(vmState.cumulativeGasUsed - previousCumulativeGas)
-    let contractAddr = if tx.contractCreation():
+    let contractAddr = if isCreate::
       generateAddress(sender, tx.nonce)
     else:
       default(Address)
     let authorities = if tx.txType == TxEip7702:
-      extractAuthorities(vmState, tx)
+      extractAuthorities(vmState)
     else:
       @[]
+
     vmState.receiptContexts.add(ReceiptContext(
       sender: sender,
       txGasUsed: txGasUsed,
       contractAddress: contractAddr,
-      authorities: authorities
+      authorities: authorities,
+      isCreate: isCreate
     ))
   rec
 
