@@ -45,9 +45,9 @@
   branch = master
 [submodule "vendor/nim-serialization"]
   path = vendor/nim-serialization
-  url = https://github.com/RazorClient/nim-serialization.git
+  url = https://github.com/status-im/nim-serialization.git
   ignore = dirty
-  branch = develop
+  branch = master
 [submodule "vendor/nim-json-serialization"]
   path = vendor/nim-json-serialization
   url = https://github.com/status-im/nim-json-serialization.git
@@ -150,7 +150,7 @@
   branch = main
 [submodule "vendor/nim-ssz-serialization"]
 	path = vendor/nim-ssz-serialization
-	url = https://github.com/status-im/nim-ssz-serialization.git
+	url = https://github.com/RazorClient/nim-ssz-serialization.git
 	ignore = untracked
 	branch = master
 [submodule "vendor/nimbus-eth2"]
