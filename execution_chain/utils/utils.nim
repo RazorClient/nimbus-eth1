@@ -17,7 +17,7 @@ import
   stew/assign2,
   nimcrypto/sha2,
   ../constants,
-  ../common/evmforks,
+  ../common/[evmforks, receipt_context],
   ./ssz_utils
 
 export eth_types_rlp
