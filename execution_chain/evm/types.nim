@@ -15,8 +15,7 @@ import
   ./interpreter/[gas_costs, op_codes],
   ./transient_storage,
   ../db/ledger,
-  ../common/[common, evmforks],
-  ../utils/receipts_context
+  ../common/[common, evmforks]
 
 export stack, memory, transient_storage
 
@@ -38,6 +37,9 @@ type
     gasPrice*       : GasInt
     versionedHashes*: seq[VersionedHash]
     blobBaseFee*    : UInt256
+    authorities*: opt(seq[Address])
+    txGasUsed*: opt(uint64) # Gas used by THIS transaction only
+    contactAddress*: opt(Address) # Address of the contract being called/created
 
   BaseVMState* = ref object of RootObj
     com*              : CommonRef
@@ -55,8 +57,6 @@ type
     blobGasUsed*      : uint64
     allLogs*          : seq[Log] # EIP-6110
     gasRefunded*      : int64    # Global gasRefunded counter
-    receiptContexts*: seq[ReceiptContext] # EIP-6466: SSZ receipt context
-    currentTxAuthorities*: seq[Address]   # EIP-7702 authorities in current tx (cleared on rollback)
 
   Computation* = ref object
     # The execution computation

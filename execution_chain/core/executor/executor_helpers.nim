@@ -87,13 +87,6 @@ proc makeReceipt*(
     else:
       @[]
 
-    vmState.receiptContexts.add(ReceiptContext(
-      sender: sender,
-      txGasUsed: txGasUsed,
-      contractAddress: contractAddr,
-      authorities: authorities,
-      isCreate: isCreate
-    ))
   rec
 
 # ------------------------------------------------------------------------------

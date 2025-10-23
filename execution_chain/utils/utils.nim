@@ -61,7 +61,7 @@ template calcReceiptsRoot*(receipts: openArray[Receipt]): Root =
   orderedTrieRoot(receipts)
 
 proc calcReceiptsRoot*(
-    receipts: openArray[ReceiptContext],
+    receipts: openArray[StoredReceipt],
     fork: EVMFork
 ): Root =
   ## Fork-aware receipts root calculation (EIP-6466)

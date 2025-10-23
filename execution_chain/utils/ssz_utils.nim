@@ -23,8 +23,7 @@ proc sszCalcTxRoot*(transactions: openArray[transactions.Transaction]): Root =
   Root(sszTxs.hash_tree_root().data)
 
 proc sszCalcReceiptsRoot*(
-    receipts: openArray[StoredReceipt],
-    contexts: openArray[ReceiptContext]
+    receipts: openArray[StoredReceipt]
 ): Root =
 
   if receipts.len == 0:
@@ -37,7 +36,6 @@ proc sszCalcReceiptsRoot*(
 
   for i in 0 ..< receipts.len:
     let rec = receipts[i]
-    let ctx = contexts[i]
 
     # Convert logs to SSZ format
     var sszLogs: seq[receipts_ssz.Log]

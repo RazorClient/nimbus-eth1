@@ -103,8 +103,8 @@ proc processTransactions*(
   vmState.allLogs = @[]
 
   # Initialize SSZ receipt contexts for post-EIP7807
-  if vmState.fork >= FkEip7807 and not skipReceipts:
-    vmState.sszReceiptContexts.setLen(transactions.len)
+  # if vmState.fork >= FkEip7807 and not skipReceipts:
+  #   vmState.sszReceiptContexts.setLen(transactions.len)
 
   withSender(transactions):
     if sender == default(Address):

@@ -125,6 +125,7 @@ proc setupHost(call: CallParams, keepStack: bool): TransactionHost =
     gasPrice       : call.gasPrice,
     versionedHashes: call.versionedHashes,
     blobBaseFee    : getBlobBaseFee(vmState.blockCtx.excessBlobGas, vmState.com, vmState.fork),
+    
   )
 
   # reset global gasRefund counter each time
