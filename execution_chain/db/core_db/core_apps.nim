@@ -257,7 +257,7 @@ proc persistTransactions*(
     blockNumber: BlockNumber;
     txRoot: Hash32;
     transactions: openArray[Transaction];
-      ) =
+      ) {.raises: [UnsupportedRlpError].} =
   const
     info = "persistTransactions()"
 

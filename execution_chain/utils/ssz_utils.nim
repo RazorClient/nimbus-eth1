@@ -2,14 +2,11 @@
 import
   eth/common/[transactions, receipts, addresses, hashes, blocks],
   eth/ssz/[receipts_ssz, transaction_ssz, blocks_ssz, sszcodec],
-  ssz_serialization/merkleization,
-  ../common/[evmforks, receipt_context]
-
-export receipts_ssz, transaction_ssz, blocks_ssz, sszcodec
+  ssz_serialization/merkleization
 
 # SSZ helper functions for EIP-6465 (transactions), EIP-6466 (receipts),
 # and EIP-7807 (SSZ block structure)
-proc sszCalcTxRoot*(transactions: openArray[transactions.Transaction]): Root =
+proc sszCalcTxRoot*(transactions: openArray[transactions.Transaction]): Root {.raises: [ValueError].} =
 
   if transactions.len == 0:
     return default(Root)
@@ -29,14 +26,9 @@ proc sszCalcReceiptsRoot*(
   if receipts.len == 0:
     return default(Root)
 
-  if receipts.len != contexts.len:
-    raiseAssert("receipts and contexts length mismatch: " & $receipts.len & " != " & $contexts.len)
-
   var sszReceipts: seq[receipts_ssz.Receipt]
 
-  for i in 0 ..< receipts.len:
-    let rec = receipts[i]
-
+  for rec in receipts:
     # Convert logs to SSZ format
     var sszLogs: seq[receipts_ssz.Log]
     for log in rec.logs:
@@ -50,33 +42,33 @@ proc sszCalcReceiptsRoot*(
         data: log.data
       ))
 
-    # Determine receipt kind and create appropriate SSZ receipt
-    let sszReceipt = if rec.receiptType == TxEip7702:
+    # Determine receipt kind and create appropriate SSZ receipt based on eip7807ReceiptType
+    let sszReceipt = case rec.eip7807ReceiptType
+    of Eip7807SetCode:
       let setCodeRec = receipts_ssz.SetCodeReceipt(
-        `from`: ctx.sender,
-        gas_used: ctx.txGasUsed,
-        contract_address: ctx.contractAddress,
+        `from`: rec.origin,
+        gas_used: rec.txGasUsed,
+        contract_address: rec.contactAddress,
         logs: sszLogs,
         status: rec.status,
-        authorities: ctx.authorities
+        authorities: rec.authorities
       )
       receipts_ssz.Receipt(kind: rSetCode, setcode: setCodeRec)
 
-    # TODO:make sure this is ok and works
-    elif ctx.isCreate:
+    of Eip7807Create:
       let createRec = receipts_ssz.CreateReceipt(
-        `from`: ctx.sender,
-        gas_used: ctx.txGasUsed,
-        contract_address: ctx.contractAddress,
+        `from`: rec.origin,
+        gas_used: rec.txGasUsed,
+        contract_address: rec.contactAddress,
         logs: sszLogs,
         status: rec.status
       )
       receipts_ssz.Receipt(kind: rCreate, create: createRec)
 
-    else:
+    of Eip7807Basic:
       let basicRec = receipts_ssz.BasicReceipt(
-        `from`: ctx.sender,
-        gas_used: ctx.txGasUsed,
+        `from`: rec.origin,
+        gas_used: rec.txGasUsed,
         contract_address: default(Address),
         logs: sszLogs,
         status: rec.status
@@ -86,7 +78,7 @@ proc sszCalcReceiptsRoot*(
     sszReceipts.add(sszReceipt)
   Root(sszReceipts.hash_tree_root().data)
 
-proc sszCalcWithdrawalsRoot*(withdrawals: openArray[Withdrawal]): Root =
+proc sszCalcWithdrawalsRoot*(withdrawals: openArray[blocks.Withdrawal]): Root =
   if withdrawals.len == 0:
     return default(Root)
   var sszW: seq[blocks_ssz.Withdrawal] = @[]
@@ -95,18 +87,18 @@ proc sszCalcWithdrawalsRoot*(withdrawals: openArray[Withdrawal]): Root =
     sszW[i] = toSszWithdrawal(w)
   Root(sszW.hash_tree_root().data)
 
-proc sszCalcSystemLogsRoot*(logs: openArray[Log]): Root =
+proc sszCalcSystemLogsRoot*(logs: openArray[receipts.Log]): Root =
   if logs.len == 0:
     return default(Root)
 
   var sszLogs: seq[receipts_ssz.Log]
   for log in logs:
-    var topics: seq[Hash32]
+    var topics: seq[Bytes32]
     for topic in log.topics:
-      topics.add(cast[Hash32](topic))
+      topics.add(cast[Bytes32](topic))
     sszLogs.add(receipts_ssz.Log(
       address: log.address,
-      topics: List[Hash32, 4](topics),
+      topics: List[Bytes32, 4](topics),
       data: log.data
     ))
 

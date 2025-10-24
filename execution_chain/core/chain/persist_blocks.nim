@@ -92,14 +92,15 @@ proc checkpoint*(p: var Persister): Result[void, string] =
       return err($$error)
 
     if p.parent.stateRoot != stateRoot:
-       let fork = p.com.toEVMFork(p.parent.timestamp)
+      let fork = p.com.toEVMFork(p.parent.timestamp)
       # TODO replace logging with better error
       debug "wrong state root in block",
         blockNumber = p.parent.number,
         blockHash = p.parent.computeBlockHash,
         parentHash = p.parent.parentHash,
         expected = p.parent.stateRoot,
-        actual = stateRoot
+        actual = stateRoot,
+        fork = fork
       return err(
         "stateRoot mismatch, expect: " & $p.parent.stateRoot & ", got: " & $stateRoot
       )
@@ -191,12 +192,12 @@ proc persistBlock*(p: var Persister, blk: Block): Result[void, string] =
       ?executionWitness.statelessProcessBlock(com, blk)
 
     let fork = com.toEVMFork(header.timestamp)
-    ?vmState.ledger.txFrame.persistWitness(header.computeBlockHash(header, fork), witness)
+    ?vmState.ledger.txFrame.persistWitness(header.computeBlockHash(), witness)
 
 
   if NoPersistHeader notin p.flags:
-     let fork = com.toEVMFork(header.timestamp)
-    let blockHash = header.computeBlockHash(header, fork)
+    let fork = com.toEVMFork(header.timestamp)
+    let blockHash = header.computeBlockHash()
     ?txFrame.persistHeaderAndSetHead(blockHash, header, com.startOfHistory)
 
   if NoPersistTransactions notin p.flags:

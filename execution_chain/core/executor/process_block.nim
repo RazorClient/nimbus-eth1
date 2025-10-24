@@ -97,7 +97,7 @@ proc processTransactions*(
     skipReceipts = false,
     collectLogs = false,
     taskpool: Taskpool = nil,
-): Result[void, string] =
+): Result[void, string] {.raises: [UnsupportedRlpError].} =
   vmState.receipts.setLen(if skipReceipts: 0 else: transactions.len)
   vmState.cumulativeGasUsed = 0
   vmState.allLogs = @[]
@@ -121,7 +121,7 @@ proc processTransactions*(
       if collectLogs:
         vmState.allLogs.add rc.value.logEntries
     else:
-        vmState.receipts[txIndex] = vmState.makeReceipt(
+      vmState.receipts[txIndex] = vmState.makeReceipt(
         tx,
         sender,
         tx.txType,
@@ -137,7 +137,7 @@ proc procBlkPreamble(
     blk: Block,
     skipValidation, skipReceipts, skipUncles: bool,
     taskpool: Taskpool,
-): Result[void, string] =
+): Result[void, string] {.raises: [UnsupportedRlpError].} =
   template header(): Header =
     blk.header
 
@@ -314,7 +314,7 @@ proc processBlock*(
     skipUncles: bool = false,
     skipStateRootCheck: bool = false,
     taskpool: Taskpool = nil,
-): Result[void, string] =
+): Result[void, string] {.raises: [UnsupportedRlpError].} =
   ## Generalised function to processes `blk` for any network.
   ?vmState.procBlkPreamble(blk, skipValidation, skipReceipts, skipUncles, taskpool)
 

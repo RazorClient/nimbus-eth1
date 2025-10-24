@@ -17,7 +17,7 @@ import
   stew/assign2,
   nimcrypto/sha2,
   ../constants,
-  ../common/[evmforks, receipt_context],
+  ../common/[evmforks],
   ./ssz_utils
 
 export eth_types_rlp
@@ -33,7 +33,7 @@ template calcTxRoot*(transactions: openArray[Transaction]): Root =
 proc calcTxRoot*(
     transactions: openArray[Transaction],
     fork: EVMFork
-): Root =
+): Root {.raises: [ValueError].} =
   ##  transactions root calculation (EIP-7807)
   if fork >= FkEip7807:
     sszCalcTxRoot(transactions)
@@ -70,8 +70,7 @@ proc calcReceiptsRoot*(
     sszCalcReceiptsRoot(receipts)
   else:
     # For pre-fork, just use regular RLP receipts
-    let rlpReceipts = receipts.mapIt(it.receipt)
-    let recs = rlpReceipts.to(seq[Receipt])
+    let recs = receipts.to(seq[Receipt])
     orderedTrieRoot(recs)
 
 func calcRequestsHash*(requests: varargs[tuple[reqType: byte, data: seq[byte]]]): Hash32 =

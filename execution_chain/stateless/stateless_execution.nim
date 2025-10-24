@@ -25,7 +25,7 @@ export witness_types, common, headers, blocks, results
 proc statelessProcessBlock*(
     witness: ExecutionWitness,
     com: CommonRef,
-    blk: Block): Result[void, string] =
+    blk: Block): Result[void, string] {.raises: [UnsupportedRlpError].} =
 
   template header(): Header =
     blk.header

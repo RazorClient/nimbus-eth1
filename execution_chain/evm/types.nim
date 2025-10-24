@@ -37,9 +37,9 @@ type
     gasPrice*       : GasInt
     versionedHashes*: seq[VersionedHash]
     blobBaseFee*    : UInt256
-    authorities*: opt(seq[Address])
-    txGasUsed*: opt(uint64) # Gas used by THIS transaction only
-    contactAddress*: opt(Address) # Address of the contract being called/created
+    authorities*: Opt[seq[Address]]
+    txGasUsed*: Opt[uint64] # Gas used by THIS transaction only
+    contactAddress*: Opt[Address] # Address of the contract being called/created
 
   BaseVMState* = ref object of RootObj
     com*              : CommonRef
@@ -57,6 +57,7 @@ type
     blobGasUsed*      : uint64
     allLogs*          : seq[Log] # EIP-6110
     gasRefunded*      : int64    # Global gasRefunded counter
+    currentTxAuthorities*: seq[Address] # EIP-7702 authorities for current tx
 
   Computation* = ref object
     # The execution computation
