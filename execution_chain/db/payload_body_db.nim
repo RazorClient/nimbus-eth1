@@ -76,7 +76,7 @@ proc getExecutionPayloadBodyV1*(
 
   ok(move(body))
 
-func toPayloadBody*(blk: Block): ExecutionPayloadBodyV1 =
+func toPayloadBody*(blk: Block): ExecutionPayloadBodyV1 {.raises: [UnsupportedRlpError].} =
   var wds: seq[WithdrawalV1]
   if blk.withdrawals.isSome:
     for w in blk.withdrawals.get:

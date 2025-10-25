@@ -146,10 +146,10 @@ func w3Withdrawals*(x: Opt[seq[common.Withdrawal]]):
   if x.isNone: Opt.none(seq[WithdrawalV1])
   else: Opt.some(w3Withdrawals x.get)
 
-func w3Tx*(tx: common.Transaction): Web3Tx =
+func w3Tx*(tx: common.Transaction): Web3Tx {.raises: [UnsupportedRlpError].} =
   Web3Tx rlp.encode(tx)
 
-func w3Txs*(list: openArray[common.Transaction]): seq[Web3Tx] =
+func w3Txs*(list: openArray[common.Transaction]): seq[Web3Tx] {.raises: [UnsupportedRlpError].} =
   result = newSeqOfCap[Web3Tx](list.len)
   for tx in list:
     result.add w3Tx(tx)

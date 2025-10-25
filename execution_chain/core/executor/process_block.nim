@@ -33,7 +33,12 @@ template withSender(txs: openArray[Transaction], body: untyped) =
   # it's available
   if taskpool == nil:
     for txIndex {.inject.}, tx {.inject.} in txs:
-      let sender {.inject.} = tx.recoverSender().valueOr(default(Address))
+      let sender {.inject.} =
+        try:
+          tx.recoverSender().valueOr(default(Address))
+        except UnsupportedRlpError:
+          # TxEip7807  can't be RLP-encoded
+          default(Address)
       body
   else:
     type Entry = (Signature, Hash32, Flowvar[Address])
@@ -51,7 +56,12 @@ template withSender(txs: openArray[Transaction], body: untyped) =
     # we use `default(Address)` to signal sig check failure
     for i, e in entries.mpairs():
       e[0] = txs[i].signature().valueOr(default(Signature))
-      e[1] = txs[i].rlpHashForSigning(txs[i].isEip155)
+      e[1] =
+        try:
+          txs[i].rlpHashForSigning(txs[i].isEip155)
+        except UnsupportedRlpError:
+          # TxEip7807 s can't be RLP-encoded
+          default(Hash32)
       let a = addr e
       # Spawning the task here allows it to start early, while we still haven't
       # hashed subsequent txs
@@ -119,7 +129,12 @@ proc procBlkPreamble(
       return err("Mismatched txRoot")
 
   if com.isOsakaOrLater(header.timestamp):
-    if rlp.getEncodedLength(blk) > MAX_RLP_BLOCK_SIZE:
+    let encodedLength =
+      try:
+        rlp.getEncodedLength(blk)
+      except UnsupportedRlpError as e:
+        return err("Block contains transaction that cannot be RLP-encoded: " & e.msg)
+    if encodedLength > MAX_RLP_BLOCK_SIZE:
       return err("Post-Osaka block exceeded MAX_RLP_BLOCK_SIZE")
 
   if com.isPragueOrLater(header.timestamp):

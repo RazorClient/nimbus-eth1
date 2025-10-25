@@ -227,6 +227,9 @@ func validateTxBasic*(
     if tx.txType == TxEip7702 and fork < FkPrague:
       return err("invalid tx: Eip7702 Tx type detected before Prague")
 
+    if tx.txType == TxEip7807:
+      return err("invalid tx: TxEip7807 uses SSZ encoding and cannot be persisted via RLP")
+
   if fork >= FkShanghai and tx.contractCreation and tx.payload.len > EIP3860_MAX_INITCODE_SIZE:
     return err("invalid tx: initcode size exceeds maximum")
 

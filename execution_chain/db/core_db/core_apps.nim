@@ -265,8 +265,19 @@ proc persistTransactions*(
     return
 
   for idx, tx in transactions:
+    # Skip TxEip7807 transactions as they use SSZ encoding, not RLP
+    if tx.txType == TxEip7807:
+      warn info, idx, txType=tx.txType, msg="Skipping TxEip7807: uses SSZ encoding, not RLP"
+      continue
+
+    let encodedTx =
+      try:
+        rlp.encode(tx)
+      except UnsupportedRlpError as e:
+        warn info, idx, txType=tx.txType, error=e.msg
+        continue
+
     let
-      encodedTx = rlp.encode(tx)
       txHash = keccak256(encodedTx)
       blockKey = transactionHashToBlockKey(txHash)
       txKey = TransactionKey(blockNumber: blockNumber, index: idx.uint)
