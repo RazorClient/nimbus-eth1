@@ -20,7 +20,7 @@
   branch = master
 [submodule "vendor/nim-eth"]
   path = vendor/nim-eth
-  url = https://github.com/status-im/nim-eth.git
+  url = https://github.com/RazorClient/nim-eth.git
   ignore = dirty
   branch = master
 [submodule "vendor/nim-http-utils"]
