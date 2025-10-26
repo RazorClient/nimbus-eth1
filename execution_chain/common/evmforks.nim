@@ -31,6 +31,7 @@ type
     FkBpo4
     FkBpo5
     FkAmsterdam
+    FkEip7919
 
 const
   FkLatest* = EVMFork.high
