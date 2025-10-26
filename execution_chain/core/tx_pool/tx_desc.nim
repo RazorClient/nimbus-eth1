@@ -337,7 +337,14 @@ proc addTx*(xp: TxPoolRef, ptx: PooledTransaction): Result[void, TxError] =
       chainId = xp.chain.com.chainId
     return err(txErrorChainIdMismatch)
 
-  let (size, id) = getEncodedLengthAndHash(ptx.tx)
+  let (size, id) =
+    try:
+      getEncodedLengthAndHash(ptx.tx)
+    except UnsupportedRlpError as e:
+      debug "Transaction cannot be RLP-encoded",
+        txType = ptx.tx.txType,
+        error = e.msg
+      return err(txErrorBasicValidation)
 
   if ptx.tx.txType == TxEip4844:
     if size > BLOB_TX_MAX_SIZE:
@@ -367,8 +374,15 @@ proc addTx*(xp: TxPoolRef, ptx: PooledTransaction): Result[void, TxError] =
     return err(txErrorBasicValidation)
 
   let
-    sender = ptx.tx.recoverSender().valueOr:
-      return err(txErrorInvalidSignature)
+    sender =
+      try:
+        ptx.tx.recoverSender().valueOr:
+          return err(txErrorInvalidSignature)
+      except UnsupportedRlpError as e:
+        debug "Transaction cannot be RLP-encoded for signature recovery",
+          txType = ptx.tx.txType,
+          error = e.msg
+        return err(txErrorBasicValidation)
     nonce = xp.getNonce(sender)
 
   # The downside of this arrangement is the ledger is not

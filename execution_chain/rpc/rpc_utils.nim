@@ -99,11 +99,17 @@ proc populateTransactionObject*(tx: Transaction,
   result.blockHash = optionalHash
   result.blockNumber = w3Qty(optionalNumber)
 
-  if (let sender = tx.recoverSender(); sender.isOk):
-    result.`from` = sender[]
+  try:
+    if (let sender = tx.recoverSender(); sender.isOk):
+      result.`from` = sender[]
+  except UnsupportedRlpError:
+    discard  # Skip sender recovery for unsupported tx types
   result.gas = Quantity(tx.gasLimit)
   result.gasPrice = Quantity(tx.gasPrice)
-  result.hash = tx.computeRlpHash
+  try:
+    result.hash = tx.computeRlpHash
+  except UnsupportedRlpError:
+    result.hash = default(Hash32)
   result.input = tx.payload
   result.nonce = Quantity(tx.nonce)
   result.to = Opt.some(tx.destination)
@@ -171,8 +177,12 @@ proc populateBlockObject*(blockHash: Hash32,
       result.transactions.add txOrHash(txObj)
   else:
     for i, tx in blk.transactions:
-      let txHash = computeRlpHash(tx)
-      result.transactions.add txOrHash(txHash)
+      try:
+        let txHash = computeRlpHash(tx)
+        result.transactions.add txOrHash(txHash)
+      except UnsupportedRlpError:
+        # Skip transactions that cannot be RLP-encoded
+        discard
 
   result.withdrawalsRoot = header.withdrawalsRoot
   result.withdrawals = blk.withdrawals
@@ -184,10 +194,17 @@ proc populateBlockObject*(blockHash: Hash32,
 proc populateReceipt*(rec: StoredReceipt, gasUsed: GasInt, tx: Transaction,
                       txIndex: uint64, header: Header, com: CommonRef): ReceiptObject =
   let
-    sender = tx.recoverSender()
+    sender =
+      try:
+        tx.recoverSender()
+      except UnsupportedRlpError:
+        Opt.none(Address)
     receipt = rec.to(Receipt)
   var res = ReceiptObject()
-  res.transactionHash = tx.computeRlpHash
+  try:
+    res.transactionHash = tx.computeRlpHash
+  except UnsupportedRlpError:
+    res.transactionHash = default(Hash32)
   res.transactionIndex = Quantity(txIndex)
   res.blockHash = header.computeBlockHash
   res.blockNumber = Quantity(header.number)

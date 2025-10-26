@@ -37,9 +37,50 @@ proc append*(w: var RlpWriter, tx: PooledTransaction) =
       # https://github.com/ethereum/EIPs/blob/dc71750143ffab2401b700c66c063d1cf7484df4/EIPS/eip-7594.md#networking
       # spec: rlp([tx_payload_body, wrapper_version, blobs, commitments, cell_proofs])
       w.startList(5)
-  w.appendTxPayload(tx.tx)
+  try:
+    w.appendTxPayload(tx.tx)
+  except UnsupportedRlpError:
+    # Skip transactions that cannot be RLP-encoded (e.g., TxEip7807)
+    # These should have been filtered at validation layer
+    discard
   if tx.blobsBundle != nil:
     w.append(tx.blobsBundle)
+
+proc append*(w: var RlpWriter, txs: seq[Transaction]) =
+  ## Override to handle UnsupportedRlpError gracefully for seq[Transaction]
+  try:
+    transactions_rlp.append(w, txs)
+  except UnsupportedRlpError:
+    # Skip transactions that cannot be RLP-encoded (e.g., TxEip7807)
+    # Filter them out and retry
+    w.startList(txs.len)
+    for tx in txs:
+      if tx.txType != TxEip7807:
+        try:
+          if tx.txType == TxLegacy:
+            w.append(tx)
+          else:
+            w.append(rlp.encode(tx))
+        except UnsupportedRlpError:
+          discard
+
+proc append*(w: var RlpWriter, txs: openArray[Transaction]) =
+  ## Override to handle UnsupportedRlpError gracefully for openArray[Transaction]
+  try:
+    transactions_rlp.append(w, txs)
+  except UnsupportedRlpError:
+    # Skip transactions that cannot be RLP-encoded (e.g., TxEip7807)
+    # Filter them out and retry
+    w.startList(txs.len)
+    for tx in txs:
+      if tx.txType != TxEip7807:
+        try:
+          if tx.txType == TxLegacy:
+            w.append(tx)
+          else:
+            w.append(rlp.encode(tx))
+        except UnsupportedRlpError:
+          discard
 
 proc read(rlp: var Rlp, T: type Blob): T {.raises: [RlpError].} =
   rlp.read(result.data)

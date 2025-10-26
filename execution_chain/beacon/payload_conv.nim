@@ -44,7 +44,7 @@ func txRoot(list: openArray[Web3Tx]): Hash32 =
 # Public functions
 # ------------------------------------------------------------------------------
 
-func executionPayload*(blk: Block): ExecutionPayload =
+func executionPayload*(blk: Block): ExecutionPayload {.raises: [UnsupportedRlpError].} =
   ExecutionPayload(
     parentHash   : blk.header.parentHash,
     feeRecipient : blk.header.coinbase,
@@ -65,7 +65,7 @@ func executionPayload*(blk: Block): ExecutionPayload =
     excessBlobGas: w3Qty blk.header.excessBlobGas,
   )
 
-func executionPayloadV1V2*(blk: Block): ExecutionPayloadV1OrV2 =
+func executionPayloadV1V2*(blk: Block): ExecutionPayloadV1OrV2 {.raises: [UnsupportedRlpError].} =
   ExecutionPayloadV1OrV2(
     parentHash   : blk.header.parentHash,
     feeRecipient : blk.header.coinbase,

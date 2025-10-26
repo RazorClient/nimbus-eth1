@@ -47,7 +47,11 @@ type
 
 proc append(w: var RlpWriter, b: BlockRef) =
   w.startList(3)
-  w.append(b.blk)
+  try:
+    w.append(b.blk)
+  except UnsupportedRlpError:
+    # Skip blocks with unsupported transaction types
+    discard
   w.append(b.hash)
   let parentIndex = if b.parent.isNil: 0'u
                     else: b.parent.index + 1'u

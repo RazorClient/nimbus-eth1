@@ -177,7 +177,7 @@ func offsetsLen(startNumber: uint64, mergeBlockNumber: uint64): int =
   else:
     MaxEra1Size
 
-proc toCompressedRlpBytes(item: auto): seq[byte] =
+proc toCompressedRlpBytes(item: auto): seq[byte] {.raises: [UnsupportedRlpError].} =
   snappy.encodeFramed(rlp.encode(item))
 
 proc fromCompressedRlpBytes[T](bytes: openArray[byte], v: var T): Result[void, string] =
@@ -225,7 +225,7 @@ proc update*(
     body: BlockBody,
     receipts: seq[Receipt],
     totalDifficulty: UInt256,
-): Result[void, string] =
+): Result[void, string] {.raises: [UnsupportedRlpError].} =
   g.update(
     f,
     blockNumber,

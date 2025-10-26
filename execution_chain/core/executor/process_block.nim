@@ -60,7 +60,7 @@ template withSender(txs: openArray[Transaction], body: untyped) =
         try:
           txs[i].rlpHashForSigning(txs[i].isEip155)
         except UnsupportedRlpError:
-          # TxEip7807 s can't be RLP-encoded
+          # TxEip7807  can't be RLP-encoded
           default(Hash32)
       let a = addr e
       # Spawning the task here allows it to start early, while we still haven't

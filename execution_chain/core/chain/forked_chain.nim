@@ -198,7 +198,10 @@ func calculateNewBase(
 proc removeBlockFromCache(c: ForkedChainRef, b: BlockRef) =
   c.hashToBlock.del(b.hash)
   for tx in b.blk.transactions:
-    c.txRecords.del(computeRlpHash(tx))
+    try:
+      c.txRecords.del(computeRlpHash(tx))
+    except UnsupportedRlpError:
+      discard
 
   for v in c.lastSnapshots.mitems():
     if v == b.txFrame:
@@ -524,7 +527,10 @@ proc validateBlock(c: ForkedChainRef,
   let newBlock = c.appendBlock(parent, blk, blkHash, txFrame, move(receipts))
 
   for i, tx in blk.transactions:
-    c.txRecords[computeRlpHash(tx)] = (blkHash, uint64(i))
+    try:
+      c.txRecords[computeRlpHash(tx)] = (blkHash, uint64(i))
+    except UnsupportedRlpError:
+      discard
 
   # Entering base auto forward mode while avoiding forkChoice
   # handled region(head - baseDistance)
@@ -970,7 +976,11 @@ proc blockByHash*(c: ForkedChainRef, blockHash: Hash32): Result[Block, string] =
 
 proc payloadBodyV1ByHash*(c: ForkedChainRef, blockHash: Hash32): Result[ExecutionPayloadBodyV1, string] =
   c.hashToBlock.withValue(blockHash, loc):
-    return ok(toPayloadBody(loc[].blk))
+    try:
+      return ok(toPayloadBody(loc[].blk))
+    # Should not happen as txtype7807 ony exist for receipts
+    except UnsupportedRlpError as e:
+      return err("Block contains transaction that cannot be RLP-encoded: " & e.msg)
 
   var header = ?c.baseTxFrame.getBlockHeader(blockHash)
   var blk = c.baseTxFrame.getExecutionPayloadBodyV1(header)
@@ -980,7 +990,10 @@ proc payloadBodyV1ByHash*(c: ForkedChainRef, blockHash: Hash32): Result[Executio
     if c.isPortalActive:
       var blockBodyPortal = ?c.portal.getBlockBodyByHeader(header)
       # Same as above
-      return ok(toPayloadBody(EthBlock.init(move(header), move(blockBodyPortal))))
+      try:
+        return ok(toPayloadBody(EthBlock.init(move(header), move(blockBodyPortal))))
+      except UnsupportedRlpError as e:
+        return err("Block contains transaction that cannot be RLP-encoded: " & e.msg)
 
   move(blk)
 
@@ -997,13 +1010,19 @@ proc payloadBodyV1ByNumber*(c: ForkedChainRef, number: BlockNumber): Result[Exec
       if c.isPortalActive:
         var blockBodyPortal = ?c.portal.getBlockBodyByHeader(header)
         # same as above
-        return ok(toPayloadBody(EthBlock.init(move(header), move(blockBodyPortal))))
+        try:
+          return ok(toPayloadBody(EthBlock.init(move(header), move(blockBodyPortal))))
+        except UnsupportedRlpError as e:
+          return err("Block contains transaction that cannot be RLP-encoded: " & e.msg)
 
     return blk
 
   for it in ancestors(c.latest):
     if number >= it.number:
-      return ok(toPayloadBody(it.blk))
+      try:
+        return ok(toPayloadBody(it.blk))
+      except UnsupportedRlpError as e:
+        return err("Block contains transaction that cannot be RLP-encoded: " & e.msg)
 
   err("Block not found, number = " & $number)
 
@@ -1057,7 +1076,12 @@ func payloadBodyV1InMemory*(c: ForkedChainRef,
 
   for i in countdown(blocks.len-1, 0):
     let y = blocks[i]
-    list.add Opt.some(toPayloadBody(y.blk))
+    try:
+      list.add Opt.some(toPayloadBody(y.blk))
+    except UnsupportedRlpError:
+      # Skip blocks with transactions that can't be RLP-encoded
+      # Should not happen as txtype7807 ony exist for receipts and never reach here to throw the exception
+      list.add Opt.none(ExecutionPayloadBodyV1)
 
 func equalOrAncestorOf*(c: ForkedChainRef, blockHash: Hash32, headHash: Hash32): bool =
   if blockHash == headHash:
@@ -1092,7 +1116,7 @@ proc isCanonicalAncestor*(c: ForkedChainRef,
     return false
   canonHash == blockHash
 
-iterator txHashInRange*(c: ForkedChainRef, fromHash: Hash32, toHash: Hash32): Hash32 =
+iterator txHashInRange*(c: ForkedChainRef, fromHash: Hash32, toHash: Hash32): Hash32 {.raises: [UnsupportedRlpError].} =
   ## toHash should be ancestor of fromHash
   ## exclude base from iteration, new block produced by txpool
   ## should not reach base

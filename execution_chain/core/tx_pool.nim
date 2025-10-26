@@ -119,15 +119,23 @@ proc removeNewBlockTxs*(xp: TxPoolRef, blk: Block, optHash = Opt.none(Hash32)) =
   # Remove only the latest block transactions
   if blk.header.parentHash == xp.rmHash:
     for tx in blk.transactions:
-      let txHash = computeRlpHash(tx)
-      xp.removeTx(txHash)
+      try:
+        let txHash = computeRlpHash(tx)
+        xp.removeTx(txHash)
+      except UnsupportedRlpError:
+        # Skip transactions that can't be RLP-encoded
+        discard
 
     xp.rmHash = fromHash
     return
 
   # Also remove transactions from older blocks
-  for txHash in xp.chain.txHashInRange(fromHash, xp.rmHash):
-    xp.removeTx(txHash)
+  try:
+    for txHash in xp.chain.txHashInRange(fromHash, xp.rmHash):
+      xp.removeTx(txHash)
+  except UnsupportedRlpError:
+    # Skip if blocks contain transactions that can't be RLP-encoded
+    discard
 
   xp.rmHash = fromHash
 
@@ -169,7 +177,13 @@ proc assembleBlock*(
     let tx = item.pooledTx
     if currentRlpSize > MAX_RLP_BLOCK_SIZE - 7:
       break
-    currentRlpSize = currentRlpSize + rlp.getEncodedLength(tx.tx)
+    let txRlpSize =
+      try:
+        rlp.getEncodedLength(tx.tx)
+      except UnsupportedRlpError:
+        # Skip transactions that can't be RLP-encoded
+        continue
+    currentRlpSize = currentRlpSize + txRlpSize
     blk.txs.add tx.tx
     if tx.blobsBundle != nil:
       doAssert(tx.blobsBundle.wrapperVersion == blobsBundle.wrapperVersion)

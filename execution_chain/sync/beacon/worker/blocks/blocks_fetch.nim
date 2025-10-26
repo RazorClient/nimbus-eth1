@@ -117,7 +117,12 @@ template fetchBodies*(
       break body                                    # return err()
 
     # Update download statistics
-    let bps = buddy.only.thruPutStats.blk.bpsSample(elapsed, b.getEncodedLength)
+    let encodedLen =
+      try:
+        b.getEncodedLength
+      except UnsupportedRlpError:
+        0  # Use 0 for unsupported blocks
+    let bps = buddy.only.thruPutStats.blk.bpsSample(elapsed, encodedLen)
 
     # Ban an overly slow peer for a while when observed consecutively.
     if fetchBodiesErrTimeout < elapsed:

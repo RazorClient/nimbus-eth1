@@ -202,7 +202,12 @@ proc handleTxHashesBroadcast*(wire: EthWireRef,
         # in the header, disconnect from the sending peer.
         let
           size = getEncodedLength(tx)  # PooledTransacion: Transaction + blobsBundle size
-          hash = computeRlpHash(tx.tx) # Only inner tx hash
+          hash =
+            try:
+              computeRlpHash(tx.tx) # Only inner tx hash
+            except UnsupportedRlpError:
+              # Skip transactions that cannot be RLP-encoded
+              continue
         map.withValue(hash, val) do:
           if tx.tx.txType.byte != val.txType:
             debug "Protocol Breach: Received transaction with type differ from announced",

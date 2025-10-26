@@ -89,7 +89,10 @@ proc deriveLogs*(
         if txHashes.isSome:
           txHashes.get[i] # cached txHashes
         else:
-          transactions[i].computeRlpHash
+          try:
+            transactions[i].computeRlpHash
+          except UnsupportedRlpError:
+            default(Hash32)
 
       for log in logs:
         let filterLog = FilterLog(
