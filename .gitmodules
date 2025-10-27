@@ -100,9 +100,9 @@
   branch = master
 [submodule "vendor/nim-web3"]
 	path = vendor/nim-web3
-	url = https://github.com/status-im/nim-web3.git
+	url = https://github.com/RazorClient/nim-web3.git
   ignore = dirty
-  branch = master
+  branch = Pureth
 [submodule "vendor/nim-snappy"]
   path = vendor/nim-snappy
   url = https://github.com/status-im/nim-snappy.git

@@ -16,7 +16,9 @@ import
   stew/byteutils,
   stew/assign2,
   nimcrypto/sha2,
-  ../constants
+  ../constants,
+  ../common/evmforks,
+  ./ssz_helpers
 
 export eth_types_rlp
 
@@ -25,11 +27,34 @@ const
   WITHDRAWAL_REQUEST_TYPE*    = 0x01.byte
   CONSOLIDATION_REQUEST_TYPE* = 0x02.byte
 
+
+proc calcTxRoot*(transactions: openArray[Transaction], fork: EVMFork): Root =
+  if fork >= FkEip7919:
+    result = sszCalcTxRoot(transactions)
+  else:
+    result = orderedTrieRoot(transactions)
+
 template calcTxRoot*(transactions: openArray[Transaction]): Root =
   orderedTrieRoot(transactions)
 
+proc calcWithdrawalsRoot*(withdrawals: openArray[Withdrawal], fork: EVMFork): Root =
+  if fork >= FkEip7919:
+    sszCalcWithdrawalsRoot(withdrawals)
+  else:
+    orderedTrieRoot(withdrawals)
+
 template calcWithdrawalsRoot*(withdrawals: openArray[Withdrawal]): Root =
   orderedTrieRoot(withdrawals)
+
+proc calcReceiptsRoot*(
+    receipts: openArray[StoredReceipt],
+    fork: EVMFork
+): Root =
+  if fork >= FkEip7919:
+    sszCalcReceiptsRoot(receipts)
+  else:
+    let recs = receipts.to(seq[Receipt])
+    orderedTrieRoot(recs)
 
 template calcReceiptsRoot*(receipts: openArray[StoredReceipt]): Root =
   let recs = receipts.to(seq[Receipt])

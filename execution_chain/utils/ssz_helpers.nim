@@ -101,7 +101,7 @@ proc sszCalcWithdrawalsRoot*(withdrawals: openArray[blocks.Withdrawal]): Root =
   sszW.setLen(withdrawals.len)
   for i, w in withdrawals:
     sszW[i] = toSszWithdrawal(w)
-  Root(sszW.hash_tree_root())
+  Root(sszW.hash_tree_root().data)
 
 proc sszCalcSystemLogsRoot*(logs: openArray[receipts.Log]): Root =
   ## Calculate SSZ merkle root for EIP-7799 system logs (same Log type as receipts)

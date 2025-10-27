@@ -46,6 +46,7 @@ type
     Amsterdam
     Eip7919
 
+
 const lastPurelyBlockNumberBasedFork* = GrayGlacier
 # MergeFork is special because of TTD.
 const firstTimeBasedFork* = Shanghai
@@ -278,7 +279,6 @@ func toForkTransitionTable*(conf: ChainConfig): ForkTransitionTable =
   result.timeThresholds[Bpo4] = conf.bpo4Time
   result.timeThresholds[Bpo5] = conf.bpo5Time
   result.timeThresholds[Amsterdam] = conf.amsterdamTime
-  result.timeThresholds[Eip7919] = conf.eip7919Time
 
 func populateFromForkTransitionTable*(conf: ChainConfig, t: ForkTransitionTable) =
   conf.homesteadBlock      = t.blockNumberThresholds[HardFork.Homestead]
@@ -342,7 +342,7 @@ const
     FkBpo4,          # Bpo4
     FkBpo5,          # Bpo5
     FkAmsterdam,     # Amsterdam
-    FkEip7919,       # Eip7919
+    FkEip7919       # Eip7919
   ]
 
 # ------------------------------------------------------------------------------
