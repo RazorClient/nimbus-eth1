@@ -110,6 +110,11 @@ proc preExecComputation(vmState: BaseVMState, call: CallParams): int64 =
     # 9. Increase the nonce of authority by one.
     ledger.setNonce(authority, auth.nonce + 1)
 
+    # Track this authority for SSZ receipt (EIP-6466)
+    var auths = vmState.txCtx.authorities.get(@[])
+    auths.add(authority)
+    vmState.txCtx.authorities = Opt.some(auths)
+
   gasRefund
 
 proc setupHost(call: CallParams, keepStack: bool): TransactionHost =
@@ -119,6 +124,11 @@ proc setupHost(call: CallParams, keepStack: bool): TransactionHost =
     gasPrice       : call.gasPrice,
     versionedHashes: call.versionedHashes,
     blobBaseFee    : getBlobBaseFee(vmState.blockCtx.excessBlobGas, vmState.com, vmState.fork),
+    sender         : Opt.some(call.sender),
+    txGasUsed      : Opt.none(uint64),
+    contractAddress: Opt.none(Address),
+    authorities    : Opt.none(seq[Address]),
+    sszReceiptKind : Opt.none(SszReceiptKind)
   )
 
   # reset global gasRefund counter each time

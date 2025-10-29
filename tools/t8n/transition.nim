@@ -272,6 +272,7 @@ proc exec(ctx: TransContext,
     if conf.traceEnabled.isSome:
       closeStream = setupTrace(conf, txIndex, computeRlpHash(tx), vmState)
 
+    let previousCumulativeGas = vmState.cumulativeGasUsed
     let rc = vmState.processTransaction(tx, sender, header)
 
     if conf.traceEnabled.isSome:
@@ -284,7 +285,7 @@ proc exec(ctx: TransContext,
       )
       continue
 
-    let rec = vmState.makeReceipt(tx.txType, rc.value)
+    let rec = vmState.makeReceipt( sender, tx.nonce, tx.txType, tx.contractCreation, tx.destination,rc.value, previousCumulativeGas )
     vmState.receipts.add rec
     receipts.add toTxReceipt(
       rec, tx, sender, txIndex, rc.value.gasUsed
@@ -333,8 +334,8 @@ proc exec(ctx: TransContext,
   ledger.postState(result.alloc)
   result.result = ExecutionResult(
     stateRoot   : ledger.getStateRoot(),
-    txRoot      : includedTx.calcTxRoot,
-    receiptsRoot: calcReceiptsRoot(vmState.receipts),
+    txRoot      : calcTxRoot(includedTx, vmState.fork),
+    receiptsRoot: calcReceiptsRoot(vmState.receipts, vmState.fork),
     logsHash    : calcLogsHash(vmState.receipts),
     logsBloom   : createBloom(vmState.receipts),
     receipts    : system.move(receipts),

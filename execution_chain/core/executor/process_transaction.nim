@@ -14,6 +14,7 @@ import
   std/strformat,
   results,
   ../../common/common,
+  ../../common/evmforks,
   ../../db/ledger,
   ../../transaction/call_evm,
   ../../transaction/call_common,
@@ -54,11 +55,17 @@ proc commitOrRollbackDependingOnGasUsed(
   # header `gasUsed` and the `vmState.cumulativeGasUsed` at a later stage.
   if header.gasLimit < vmState.cumulativeGasUsed + gasUsed:
     vmState.ledger.rollback(accTx)
+    vmState.txCtx.authorities.setLen(0)
     err(&"invalid tx: block header gasLimit reached. gasLimit={header.gasLimit}, gasUsed={vmState.cumulativeGasUsed}, addition={gasUsed}")
   else:
     # Accept transaction and collect mining fee.
     vmState.ledger.commit(accTx)
-    vmState.ledger.addBalance(vmState.coinbase(), gasUsed.u256 * priorityFee.u256)
+    if vmState.fork >= FkEip7919:
+      # EIP-7799: accumulate priority fees; credit at end of block
+      vmState.priorityFeesAcc = vmState.priorityFeesAcc + (gasUsed.u256 * priorityFee.u256)
+    else:
+      # Pre-7799 behavior: credit priority fees per transaction
+      vmState.ledger.addBalance(vmState.coinbase(), gasUsed.u256 * priorityFee.u256)
     vmState.cumulativeGasUsed += gasUsed
 
     # Return remaining gas to the block gas counter so it is
@@ -108,7 +115,7 @@ proc processTransactionImpl(
   let
     com = vmState.com
     txRes = roDB.validateTransaction(tx, sender, header.gasLimit, baseFee256, excessBlobGas, com, fork)
-    res = if txRes.isOk:      
+    res = if txRes.isOk:
       # Execute the transaction.
       vmState.captureTxStart(tx.gasLimit)
       let

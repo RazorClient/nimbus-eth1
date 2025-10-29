@@ -16,7 +16,10 @@ import
   ".."/[constants, db/ledger],
   "."/[code_stream, computation, evm_errors],
   "."/[message, precompiles, state, types],
-  ./interpreter/op_dispatcher
+  ./interpreter/op_dispatcher,
+  ../common/evmforks,
+  ../common/eip_constants,
+  ../utils/log_utils
 
 logScope:
   topics = "vm opcode"
@@ -72,6 +75,18 @@ proc beforeExecCall(c: Computation) =
       db.subBalance(c.msg.sender, c.msg.value)
       db.addBalance(c.msg.contractAddress, c.msg.value)
 
+    # EIP-7708: emit ETH transfer log for nonzero-value CALL/tx
+    if c.fork >= FkEip7919 and (not c.msg.value.isZero):
+      var log: Log
+      log.address = SYSTEM_ADDRESS
+      log.topics = @[
+        Topic(EIP7708Magic),
+        addressToTopic(c.msg.sender),
+        addressToTopic(c.msg.contractAddress)
+      ]
+      log.data = u256ToBytesBE(c.msg.value)
+      c.addLogEntry(log)
+
 func afterExecCall(c: Computation) =
   ## Collect all of the accounts that *may* need to be deleted based on EIP161
   ## https://github.com/ethereum/EIPs/blob/master/EIPS/eip-161.md
@@ -98,6 +113,7 @@ proc beforeExecCreate(c: Computation): bool =
       return true
     db.setNonce(c.msg.sender, nonce + 1)
 
+
     # We add this to the access list _before_ taking a snapshot.
     # Even if the creation fails, the access-list change should not be rolled
     # back EIP2929
@@ -119,6 +135,18 @@ proc beforeExecCreate(c: Computation): bool =
     if c.fork >= FkSpurious:
       # EIP161 nonce incrementation
       db.incNonce(c.msg.contractAddress)
+      
+  # EIP-7708: emit ETH transfer log for nonzero-value transaction (create)
+  if c.fork >= FkEip7919 and (not c.msg.value.isZero):
+    var log: Log
+    log.address = SYSTEM_ADDRESS
+    log.topics = @[
+      Topic(EIP7708Magic),
+      addressToTopic(c.msg.sender),
+      addressToTopic(c.msg.contractAddress)
+    ]
+    log.data = u256ToBytesBE(c.msg.value)
+    c.addLogEntry(log)
 
   return false
 

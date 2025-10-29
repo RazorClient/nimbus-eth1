@@ -23,6 +23,11 @@ type
   VMFlag* = enum
     ExecutionOK
 
+  SszReceiptKind* = enum
+    SszBasic
+    SszCreate
+    SszSetCode
+
   BlockContext* = object
     timestamp*        : EthTime
     gasLimit*         : GasInt
@@ -38,6 +43,12 @@ type
     gasPrice*       : GasInt
     versionedHashes*: seq[VersionedHash]
     blobBaseFee*    : UInt256
+    # EIP-7919: SSZ receipt context
+    sender*         : Opt[Address]
+    txGasUsed*      : Opt[uint64]
+    contractAddress*: Opt[Address]
+    authorities*    :Opt[seq[Address]]
+    sszReceiptKind* : Opt[SszReceiptKind]
 
   BaseVMState* = ref object of RootObj
     com*              : CommonRef
@@ -53,6 +64,9 @@ type
     cumulativeGasUsed*: GasInt
     gasCosts*         : GasCosts
     blobGasUsed*      : uint64
+     # EIP-7799: system-level logs and batched fees
+    systemLogs*       : seq[Log]
+    priorityFeesAcc*  : UInt256
     allLogs*          : seq[Log] # EIP-6110
     gasRefunded*      : int64    # Global gasRefunded counter
 

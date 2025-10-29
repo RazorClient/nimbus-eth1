@@ -154,6 +154,7 @@ proc newPayload*(ben: BeaconEngineRef,
 
   let
     requestsHash = calcRequestsHash(executionRequests)
+    systemLogsRoot = payload.systemLogsRoot
     blk =
       try:
         ethBlock(payload, beaconRoot, requestsHash)
@@ -174,6 +175,12 @@ proc newPayload*(ben: BeaconEngineRef,
   let blockHash = payload.blockHash
   header.validateBlockHash(blockHash, version).isOkOr:
     return error
+
+  if com isEip7919OrLater(timestamp):
+    if systemLogsRoot.isNone:
+      return invalidParams("Post-Osaka payload must include systemLogsRoot")
+  elif systemLogsRoot.isSome:
+    return invalidParams("Pre-Osaka payload must not include systemLogsRoot")
 
   # If we already have the block locally, ignore the entire execution and just
   # return a fake success.

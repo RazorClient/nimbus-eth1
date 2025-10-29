@@ -18,6 +18,8 @@ import
   ../../transaction,
   ../../evm/state,
   ../../evm/types,
+  ../../utils/log_utils,
+  ../../common/eip_constants,
   ../dao,
   ../eip6110,
   ./calculate_reward,
@@ -91,11 +93,16 @@ proc processTransactions*(
   vmState.receipts.setLen(if skipReceipts: 0 else: transactions.len)
   vmState.cumulativeGasUsed = 0
   vmState.allLogs = @[]
+   # EIP-7799: reset system logs and fee accumulator per block
+  vmState.systemLogs = @[]
+  vmState.priorityFeesAcc = 0.u256
 
   withSender(transactions):
     if sender == default(Address):
       return err("Could not get sender for tx with index " & $(txIndex))
 
+    # Capture cumulative gas before processing transaction
+    let previousCumulativeGas = vmState.cumulativeGasUsed
     let rc = vmState.processTransaction(tx, sender, header)
     if rc.isErr:
       return err("Error processing tx with index " & $(txIndex) & ":" & rc.error)
@@ -105,7 +112,7 @@ proc processTransactions*(
       if collectLogs:
         vmState.allLogs.add rc.value.logEntries
     else:
-      vmState.receipts[txIndex] = vmState.makeReceipt(tx.txType, rc.value)
+      vmState.receipts[txIndex] = vmState.makeReceipt(sender, tx.nonce, tx.txType, tx.contractCreation(),tx.destination, rc.value,  previousCumulativeGas)
       if collectLogs:
         vmState.allLogs.add vmState.receipts[txIndex].logs
   ok()
@@ -166,6 +173,19 @@ proc procBlkPreamble(
   elif blk.transactions.len > 0:
     return err("Transactions in block with empty txRoot")
 
+  # EIP-7799: batch-credit priority fees after all txs and before withdrawals
+  if vmState.fork >= FkEip7919 and vmState.priorityFeesAcc > 0.u256:
+    vmState.ledger.addBalance(header.coinbase, vmState.priorityFeesAcc)
+    # Append system log for priority rewards
+    var feeLog: Log
+    feeLog.address = SYSTEM_ADDRESS
+    feeLog.topics = @[
+      Topic(EIP7799PriorityRewardsTopic),
+      addressToTopic(header.coinbase)
+    ]
+    feeLog.data = u256ToBytesBE(vmState.priorityFeesAcc)
+    vmState.systemLogs.add(feeLog)
+
   if com.isShanghaiOrLater(header.timestamp):
     if header.withdrawalsRoot.isNone:
       return err("Post-Shanghai block header must have withdrawalsRoot")
@@ -174,11 +194,34 @@ proc procBlkPreamble(
 
     for withdrawal in blk.withdrawals.get:
       vmState.ledger.addBalance(withdrawal.address, withdrawal.weiAmount)
+       # EIP-7799: append system log per withdrawal
+      var wLog: Log
+      wLog.address = SYSTEM_ADDRESS
+      wLog.topics = @[
+        Topic(EIP7799WithdrawalTopic),
+        addressToTopic(withdrawal.address)
+      ]
+      wLog.data = u256ToBytesBE(withdrawal.weiAmount)
+      vmState.systemLogs.add(wLog)
   else:
     if header.withdrawalsRoot.isSome:
       return err("Pre-Shanghai block header must not have withdrawalsRoot")
     if blk.withdrawals.isSome:
       return err("Pre-Shanghai block body must not have withdrawals")
+
+  # EIP-7799: Validate systemLogsRoot
+  if vmState.fork >= FkEip7919:
+    let computedRoot = sszCalcSystemLogsRoot(vmState.systemLogs)
+    if header.systemLogsRoot.isSome:
+      if computedRoot != header.systemLogsRoot.get:
+        debug "systemLogsRoot mismatch",
+          computed = computedRoot, header = header.systemLogsRoot.get
+        return err("systemLogsRoot mismatch")
+    else:
+      return err("Post-Eip7919  block header must have systemLogsRoot")
+  elif header.systemLogsRoot.isSome:
+    return err("Pre-Eip7919 block header must not have systemLogsRoot")
+
 
   if vmState.cumulativeGasUsed != header.gasUsed:
     # TODO replace logging with better error
@@ -251,7 +294,7 @@ proc procBlkEpilogue(
           blockNumber = header.number, actual = bloom, expected = header.logsBloom
         return err("bloom mismatch")
 
-      let receiptsRoot = calcReceiptsRoot(vmState.receipts)
+      let receiptsRoot = calcReceiptsRoot(vmState.receipts, vmState.fork)
       if header.receiptsRoot != receiptsRoot:
         # TODO replace logging with better error
         debug "wrong receiptRoot in block",

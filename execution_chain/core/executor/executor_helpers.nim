@@ -48,8 +48,17 @@ func createBloom*(receipts: openArray[StoredReceipt]): Bloom =
   bloom.value.to(Bloom)
 
 proc makeReceipt*(
-    vmState: BaseVMState; txType: TxType, callResult: LogResult): StoredReceipt =
+    vmState: BaseVMState;
+    sender: Address;
+    nonce: AccountNonce;
+    txType: TxType;
+    isCreate: bool;
+    destination: Address;
+    callResult: LogResult;
+    previousCumulativeGas: GasInt  # For calculating per-tx gas
+): StoredReceipt =
   var rec: StoredReceipt
+
   if vmState.com.isByzantiumOrLater(vmState.blockNumber):
     rec.isHash = false
     rec.status = vmState.status
@@ -59,9 +68,72 @@ proc makeReceipt*(
     # we set the status for the t8n output consistency
     rec.status = vmState.status
 
-  rec.receiptType = txType
   rec.cumulativeGasUsed = vmState.cumulativeGasUsed
   assign(rec.logs, callResult.logEntries)
+
+  # Default to legacy behaviour unless the SSZ receipts fork is active
+  if vmState.fork >= FkEip7919:
+    # All post-fork stored receipts use the EIP-7807 typed format
+    rec.receiptType = Eip7807Receipt
+
+    let gasUsedDelta = vmState.cumulativeGasUsed - previousCumulativeGas
+    let txGasUsed = uint64(gasUsedDelta)
+    rec.txGasUsed = txGasUsed
+    rec.origin = sender
+
+    var contractAddr = default(Address)
+    if isCreate:
+      contractAddr =
+        if callResult.contractAddress != default(Address):
+          callResult.contractAddress
+        else:
+          generateAddress(sender, nonce)
+    elif txType == TxEip7702:
+      contractAddr = destination
+    rec.contactAddress = contractAddr
+
+    case txType
+    of TxEip7702:
+      rec.eip7807ReceiptType = Eip7807SetCode
+      rec.authorities = @vmState.txCtx.authorities
+    else:
+      if isCreate:
+        rec.eip7807ReceiptType = Eip7807Create
+      else:
+        rec.eip7807ReceiptType = Eip7807Basic
+      rec.authorities = @[]
+
+    # Maintain txCtx bookkeeping for downstream consumers
+    vmState.txCtx.txGasUsed = Opt.some(txGasUsed)
+    if isCreate:
+      vmState.txCtx.contractAddress = Opt.some(contractAddr)
+    else:
+      vmState.txCtx.contractAddress = Opt.none(Address)
+
+    if txType == TxEip7702:
+      vmState.txCtx.sszReceiptKind = SszSetCode
+    elif isCreate:
+      vmState.txCtx.sszReceiptKind = SszCreate
+    else:
+      vmState.txCtx.sszReceiptKind = SszBasic
+  else:
+    rec.receiptType = txType
+    rec.eip7807ReceiptType = Eip7807Basic
+    rec.txGasUsed = 0
+    rec.authorities = @[]
+    rec.contactAddress = default(Address)
+    rec.origin = default(Address)
+    vmState.txCtx.txGasUsed = Opt.none(uint64)
+    vmState.txCtx.contractAddress = Opt.none(Address)
+    vmState.txCtx.sszReceiptKind = SszBasic
+  # Authorities for non-SetCode receipts should always be empty
+  if rec.eip7807ReceiptType != Eip7807SetCode and rec.authorities.len != 0:
+    rec.authorities.setLen(0)
+
+  if vmState.fork >= FkEip7919
+    if rec.eip7807ReceiptType != Eip7807SetCode:
+      vmState.txCtx.authorities.setLen(0)
+
   rec
 
 # ------------------------------------------------------------------------------

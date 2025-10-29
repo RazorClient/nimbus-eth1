@@ -13,7 +13,9 @@ import
   ./web3_eth_conv,
   web3/execution_types,
   eth/common/eth_types_rlp,
-  eth/trie/ordered_trie
+  eth/trie/ordered_trie,
+  ../../common/common,
+  ../../utils/utils
 
 # ------------------------------------------------------------------------------
 # Private helpers
@@ -44,7 +46,8 @@ func txRoot(list: openArray[Web3Tx]): Hash32 =
 # Public functions
 # ------------------------------------------------------------------------------
 
-func executionPayload*(blk: Block): ExecutionPayload {.raises: [UnsupportedRlpError].} =
+func executionPayload*(blk: Block, com: CommonRef): ExecutionPayload {.raises: [UnsupportedRlpError].} =
+  let fork = com.toEVMFork(blk.header.timestamp)
   ExecutionPayload(
     parentHash   : blk.header.parentHash,
     feeRecipient : blk.header.coinbase,
@@ -58,14 +61,16 @@ func executionPayload*(blk: Block): ExecutionPayload {.raises: [UnsupportedRlpEr
     timestamp    : w3Qty blk.header.timestamp,
     extraData    : w3ExtraData blk.header.extraData,
     baseFeePerGas: blk.header.baseFeePerGas.get(0.u256),
-    blockHash    : blk.header.computeRlpHash,
+   blockHash    : computeBlockHash(blk.header, fork),
     transactions : w3Txs blk.txs,
     withdrawals  : w3Withdrawals blk.withdrawals,
     blobGasUsed  : w3Qty blk.header.blobGasUsed,
     excessBlobGas: w3Qty blk.header.excessBlobGas,
+    systemLogsRoot: blk.header.systemLogsRoot,
   )
 
-func executionPayloadV1V2*(blk: Block): ExecutionPayloadV1OrV2 {.raises: [UnsupportedRlpError].} =
+func executionPayloadV1V2*(blk: Block, com: CommonRef): ExecutionPayloadV1OrV2 {.raises: [UnsupportedRlpError].} =
+  let fork = com.toEVMFork(blk.header.timestamp)
   ExecutionPayloadV1OrV2(
     parentHash   : blk.header.parentHash,
     feeRecipient : blk.header.coinbase,
@@ -86,14 +91,21 @@ func executionPayloadV1V2*(blk: Block): ExecutionPayloadV1OrV2 {.raises: [Unsupp
 
 func blockHeader*(p: ExecutionPayload,
                   parentBeaconBlockRoot: Opt[Hash32],
-                  requestsHash: Opt[Hash32]):
+                  requestsHash: Opt[Hash32],
+                  systemLogsRoot: Opt[Hash32],  # EIP-7799
+                  com: CommonRef):
                     Header =
+  let
+    fork = com.toEVMFork(timestamp)
+    transactions = ethTxs p.transactions
+    withdrawals = ethWithdrawals p.withdrawals
+
   Header(
     parentHash     : p.parentHash,
     ommersHash     : EMPTY_UNCLE_HASH,
     coinbase       : p.feeRecipient,
     stateRoot      : p.stateRoot,
-    transactionsRoot: txRoot p.transactions,
+    transactionsRoot: calcTxRoot(transactions, fork),
     receiptsRoot   : p.receiptsRoot,
     logsBloom      : p.logsBloom,
     difficulty     : 0.u256,
@@ -104,7 +116,7 @@ func blockHeader*(p: ExecutionPayload,
     extraData      : ethBlob p.extraData,
     mixHash        : p.prevRandao,
     nonce          : default(Bytes8),
-    baseFeePerGas  : Opt.some(p.baseFeePerGas),
+    baseFeePerGas  : if withdrawals.isSome: calcWithdrawalsRoot(withdrawals.get, fork) else: Opt.none(Hash32),
     withdrawalsRoot: wdRoot p.withdrawals,
     blobGasUsed    : u64(p.blobGasUsed),
     excessBlobGas  : u64(p.excessBlobGas),
@@ -122,10 +134,12 @@ func blockBody*(p: ExecutionPayload):
 
 func ethBlock*(p: ExecutionPayload,
                parentBeaconBlockRoot: Opt[Hash32],
-               requestsHash: Opt[Hash32]):
+               requestsHash: Opt[Hash32],
+               systemLogsRoot: Opt[Hash32],  # EIP-7799
+               com: CommonRef):
                  Block {.gcsafe, raises:[RlpError].} =
   Block(
-    header      : blockHeader(p, parentBeaconBlockRoot, requestsHash),
+    header      : blockHeader(p, parentBeaconBlockRoot, requestsHash, systemLogsRoot, com),
     uncles      : @[],
     transactions: ethTxs p.transactions,
     withdrawals : ethWithdrawals p.withdrawals,

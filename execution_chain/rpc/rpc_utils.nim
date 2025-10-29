@@ -154,6 +154,7 @@ proc populateBlockObject*(blockHash: Hash32,
   result.difficulty = header.difficulty
   result.extraData = HistoricExtraData header.extraData
   result.mixHash = Hash32 header.mixHash
+  result.systemLogsRoot = header.systemLogsRoot
 
   # discard sizeof(seq[byte]) of extraData and use actual length
   type ExtraDataType = typeof(header.extraData)
@@ -366,7 +367,7 @@ proc populateConfigObject*(com: CommonRef, fork: HardFork): ConfigObject =
   configObject.blobSchedule.baseFeeUpdateFraction = Number com.baseFeeUpdateFraction(fork)
 
   # Precompiles
-  let 
+  let
     evmFork = ToEVMFork[fork]
     lastPrecompile = getMaxPrecompile(evmFork)
 
@@ -386,7 +387,7 @@ proc populateConfigObject*(com: CommonRef, fork: HardFork): ConfigObject =
 
   return configObject
 
-proc getEthConfigObject*(com: CommonRef, 
+proc getEthConfigObject*(com: CommonRef,
                          chain: ForkedChainRef,
                          fork: HardFork,
                          nextFork: Opt[HardFork],

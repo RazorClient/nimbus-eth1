@@ -125,8 +125,9 @@ proc runTxCommit(pst: var TxPacker; item: TxItemRef; callResult: LogResult, xp: 
   vmState.gasPool += item.tx.gasLimit - callResult.gasUsed
 
   # gasUsed accounting
+  let previousCumulativeGas = vmState.cumulativeGasUsed
   vmState.cumulativeGasUsed += callResult.gasUsed
-  vmState.receipts[inx] = vmState.makeReceipt(item.tx.txType, callResult)
+  vmState.receipts[inx] = vmState.makeReceipt( item.sender, item.tx.nonce, item.tx.txType, item.tx.contractCreation, item.tx.destination, callResult,  previousCumulativeGas )
   pst.packedTxs.add item
 
 # ------------------------------------------------------------------------------
@@ -197,6 +198,8 @@ proc vmExecGrabItem(pst: var TxPacker; item: TxItemRef, xp: TxPoolRef): bool =
   # Find out what to do next: accepting this tx or trying the next account
   if not vmState.classifyPacked(callResult.gasUsed):
     vmState.ledger.rollback(accTx)
+    # Clear EIP-7702 authorities
+    vmState.txCtx.authorities.setLen(0)
     if vmState.classifyPackedNext():
       return ContinueWithNextAccount
     return StopCollecting

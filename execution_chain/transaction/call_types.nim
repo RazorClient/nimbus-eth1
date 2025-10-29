@@ -57,6 +57,7 @@ type
   LogResult* = object
     logEntries*: seq[Log]
     gasUsed*:    GasInt
+    contractAddress*: Address
 
   OutputResult* = object
     error*:   string

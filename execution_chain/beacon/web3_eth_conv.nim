@@ -10,11 +10,13 @@
 import
   std/[typetraits],
   chronicles,
+  ssz_serialization,
   web3/primitives as web3types,
   web3/eth_api_types,
   web3/engine_api_types,
   web3/execution_types,
   eth/common/eth_types_rlp,
+  eth/ssz/[sszcodec, adapter, transaction_builder],
   stew/byteutils,
   ../utils/utils
 
@@ -147,7 +149,15 @@ func w3Withdrawals*(x: Opt[seq[common.Withdrawal]]):
   else: Opt.some(w3Withdrawals x.get)
 
 func w3Tx*(tx: common.Transaction): Web3Tx {.raises: [UnsupportedRlpError].} =
-  Web3Tx rlp.encode(tx)
+ try:
+    Web3Tx rlp.encode(tx)
+ except UnsupportedRlpError:
+    try:
+      let sszTx = toSszTx(tx)
+      Web3Tx SSZ.encode(sszTx)
+    except TxBuildError, SszError, ValueError:
+      Web3Tx @[]
+
 
 func w3Txs*(list: openArray[common.Transaction]): seq[Web3Tx] {.raises: [UnsupportedRlpError].} =
   result = newSeqOfCap[Web3Tx](list.len)

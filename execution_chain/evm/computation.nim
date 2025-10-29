@@ -21,6 +21,8 @@ import
   ../common/[evmforks],
   ../utils/[utils, mergeutils],
   ../common/common,
+  ../common/eip_constants,
+  ../utils/log_utils,
   eth/common/eth_types_rlp,
   chronicles, chronos
 
@@ -275,6 +277,18 @@ proc execSelfDestruct*(c: Computation, beneficiary: Address) =
       contractAddress = c.msg.contractAddress.toHex,
       localBalance = localBalance.toString,
       beneficiary = beneficiary.toHex
+
+    # EIP-7708: emit ETH transfer log for nonzero-value SELFDESTRUCT
+    if c.fork >= FkEip7919 and not localBalance.isZero:
+      var log: Log
+      log.address = SYSTEM_ADDRESS
+      log.topics = @[
+        Topic(EIP7708Magic),
+        addressToTopic(c.msg.contractAddress),
+        addressToTopic(beneficiary)
+      ]
+      log.data = u256ToBytesBE(localBalance)
+      c.addLogEntry(log)
 
 # Using `proc` as `addLogEntry()` might be `proc` in logging mode
 proc addLogEntry*(c: Computation, log: Log) =
