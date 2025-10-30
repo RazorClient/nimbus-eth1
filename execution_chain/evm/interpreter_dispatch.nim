@@ -18,8 +18,7 @@ import
   "."/[message, precompiles, state, types],
   ./interpreter/op_dispatcher,
   ../common/evmforks,
-  ../common/eip_constants,
-  ../utils/log_utils
+  ../common/eip_constants
 
 logScope:
   topics = "vm opcode"
@@ -84,7 +83,7 @@ proc beforeExecCall(c: Computation) =
         addressToTopic(c.msg.sender),
         addressToTopic(c.msg.contractAddress)
       ]
-      log.data = u256ToBytesBE(c.msg.value)
+      log.data = c.msg.value
       c.addLogEntry(log)
 
 func afterExecCall(c: Computation) =
@@ -135,7 +134,7 @@ proc beforeExecCreate(c: Computation): bool =
     if c.fork >= FkSpurious:
       # EIP161 nonce incrementation
       db.incNonce(c.msg.contractAddress)
-      
+
   # EIP-7708: emit ETH transfer log for nonzero-value transaction (create)
   if c.fork >= FkEip7919 and (not c.msg.value.isZero):
     var log: Log
@@ -145,7 +144,7 @@ proc beforeExecCreate(c: Computation): bool =
       addressToTopic(c.msg.sender),
       addressToTopic(c.msg.contractAddress)
     ]
-    log.data = u256ToBytesBE(c.msg.value)
+    log.data = c.msg.value
     c.addLogEntry(log)
 
   return false

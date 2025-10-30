@@ -41,7 +41,7 @@ proc init(
   assign(self.parent, parent)
   assign(self.blockCtx, blockCtx)
   const txCtx = default(TxContext)
-  assign(self.txCtx, txCtx)
+  self.txCtx = txCtx
   self.flags = flags
   self.fork = self.determineFork
   self.tracer = tracer

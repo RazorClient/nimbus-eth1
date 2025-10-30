@@ -18,7 +18,6 @@ import
   ../../transaction,
   ../../evm/state,
   ../../evm/types,
-  ../../utils/log_utils,
   ../../common/eip_constants,
   ../dao,
   ../eip6110,
@@ -183,7 +182,7 @@ proc procBlkPreamble(
       Topic(EIP7799PriorityRewardsTopic),
       addressToTopic(header.coinbase)
     ]
-    feeLog.data = u256ToBytesBE(vmState.priorityFeesAcc)
+    feeLog.data = vmState.priorityFeesAcc
     vmState.systemLogs.add(feeLog)
 
   if com.isShanghaiOrLater(header.timestamp):
@@ -201,7 +200,7 @@ proc procBlkPreamble(
         Topic(EIP7799WithdrawalTopic),
         addressToTopic(withdrawal.address)
       ]
-      wLog.data = u256ToBytesBE(withdrawal.weiAmount)
+      wLog.data = withdrawal.weiAmount
       vmState.systemLogs.add(wLog)
   else:
     if header.withdrawalsRoot.isSome:

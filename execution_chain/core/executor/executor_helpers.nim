@@ -12,6 +12,7 @@
 
 import
   eth/bloom,
+  results,
   stew/assign2,
   ../../db/ledger,
   ../../evm/state,
@@ -95,7 +96,7 @@ proc makeReceipt*(
     case txType
     of TxEip7702:
       rec.eip7807ReceiptType = Eip7807SetCode
-      rec.authorities = @vmState.txCtx.authorities
+      rec.authorities = vmState.txCtx.authorities.get(@[])
     else:
       if isCreate:
         rec.eip7807ReceiptType = Eip7807Create
@@ -111,11 +112,11 @@ proc makeReceipt*(
       vmState.txCtx.contractAddress = Opt.none(Address)
 
     if txType == TxEip7702:
-      vmState.txCtx.sszReceiptKind = SszSetCode
+      vmState.txCtx.sszReceiptKind = Opt.some(SszSetCode)
     elif isCreate:
-      vmState.txCtx.sszReceiptKind = SszCreate
+      vmState.txCtx.sszReceiptKind = Opt.some(SszCreate)
     else:
-      vmState.txCtx.sszReceiptKind = SszBasic
+      vmState.txCtx.sszReceiptKind = Opt.some(SszBasic)
   else:
     rec.receiptType = txType
     rec.eip7807ReceiptType = Eip7807Basic
@@ -125,14 +126,14 @@ proc makeReceipt*(
     rec.origin = default(Address)
     vmState.txCtx.txGasUsed = Opt.none(uint64)
     vmState.txCtx.contractAddress = Opt.none(Address)
-    vmState.txCtx.sszReceiptKind = SszBasic
+    vmState.txCtx.sszReceiptKind = Opt.none(SszReceiptKind)
   # Authorities for non-SetCode receipts should always be empty
   if rec.eip7807ReceiptType != Eip7807SetCode and rec.authorities.len != 0:
     rec.authorities.setLen(0)
 
-  if vmState.fork >= FkEip7919
+  if vmState.fork >= FkEip7919:
     if rec.eip7807ReceiptType != Eip7807SetCode:
-      vmState.txCtx.authorities.setLen(0)
+      vmState.txCtx.authorities = Opt.none(seq[Address])
 
   rec
 

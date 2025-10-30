@@ -22,7 +22,6 @@ import
   ../utils/[utils, mergeutils],
   ../common/common,
   ../common/eip_constants,
-  ../utils/log_utils,
   eth/common/eth_types_rlp,
   chronicles, chronos
 
@@ -287,7 +286,7 @@ proc execSelfDestruct*(c: Computation, beneficiary: Address) =
         addressToTopic(c.msg.contractAddress),
         addressToTopic(beneficiary)
       ]
-      log.data = u256ToBytesBE(localBalance)
+      log.data = localBalance
       c.addLogEntry(log)
 
 # Using `proc` as `addLogEntry()` might be `proc` in logging mode
