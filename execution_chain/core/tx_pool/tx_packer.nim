@@ -199,7 +199,7 @@ proc vmExecGrabItem(pst: var TxPacker; item: TxItemRef, xp: TxPoolRef): bool =
   if not vmState.classifyPacked(callResult.gasUsed):
     vmState.ledger.rollback(accTx)
     # Clear EIP-7702 authorities
-    vmState.txCtx.authorities.setLen(0)
+    vmState.txCtx.authorities = Opt.some(newSeq[Address](0))
     if vmState.classifyPackedNext():
       return ContinueWithNextAccount
     return StopCollecting

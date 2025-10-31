@@ -122,3 +122,38 @@ proc sszCalcSystemLogsRoot*(logs: openArray[receipts.Log]): Root =
     ))
 
   Root(sszLogs.hash_tree_root().data)
+
+
+proc sszCalcBlockHash*(header: headers.Header): Hash32 =
+  var sszHeader: blocks_ssz.Header
+  sszHeader.parent_hash = Root(header.parentHash.data)
+  sszHeader.miner = header.coinbase
+  sszHeader.state_root = Bytes32(header.stateRoot.data)
+  sszHeader.transactions_root = Root(header.txRoot.data)
+  sszHeader.receipts_root = Root(header.receiptsRoot.data)
+  sszHeader.number = header.number.uint64
+  sszHeader.gas_limits = blocks_ssz.GasAmounts(
+    regular: header.gasLimit.uint64,
+    blob: blocks_ssz.MAX_BLOB_GAS_PER_BLOCK
+  )
+  sszHeader.gas_used = blocks_ssz.GasAmounts(
+    regular: header.gasUsed.uint64,
+    blob: header.blobGasUsed.get
+  )
+  sszHeader.timestamp = header.timestamp.uint64
+  sszHeader.extra_data = @(header.extraData)
+  sszHeader.mix_hash = Bytes32(header.mixHash.data)
+  sszHeader.base_fees_per_gas = blocks_ssz.BlobFeesPerGas(
+    regular: header.baseFeePerGas.get.truncate(uint64),
+    blob: blobBaseFee
+  )
+  sszHeader.withdrawals_root = Root(header.withdrawalsRoot.get.data)
+  sszHeader.excess_gas = blocks_ssz.GasAmounts(
+    regular: 0,  # Not used in current spec
+    blob: header.excessBlobGas.get
+  )
+  sszHeader.parent_beacon_block_root = Root(header.parentBeaconBlockRoot.get.data)
+  sszHeader.requests_hash = Bytes32(header.requestsHash.get.data)
+  sszHeader.system_logs_root = Root(header.systemLogsRoot.get.data)
+
+  Hash32(sszHeader.hash_tree_root().data)

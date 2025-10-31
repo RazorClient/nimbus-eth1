@@ -19,7 +19,7 @@ import
   ../utils/mergeutils,
   ../evm/code_bytes,
   ../core/eip7702,
-  "/.."/[constants, utils/utils],
+  "/.."/[constants],
   ./access_list as ac_access_list,
   "."/[core_db, storage_types],
   ./aristo/aristo_blobify

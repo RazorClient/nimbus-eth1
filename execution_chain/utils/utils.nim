@@ -60,6 +60,16 @@ template calcReceiptsRoot*(receipts: openArray[StoredReceipt]): Root =
   let recs = receipts.to(seq[Receipt])
   orderedTrieRoot(recs)
 
+proc computeBlockHash*(header: Header, fork: EVMFork): Hash32 =
+  ## Fork-aware block hash computation
+  ## For EIP-7919+, use SSZ hash_tree_root; otherwise use RLP hash
+  if fork >= FkEip7919:
+    # SSZ-based block hash for EIP-7919
+    sszCalcBlockHash(header)
+  else:
+    # RLP-based block hash (pre-EIP-7919)
+    computeBlockHash(header)
+
 template calcReceiptsRoot*(receipts: openArray[Receipt]): Root =
   orderedTrieRoot(receipts)
 
@@ -196,3 +206,10 @@ func weiAmount*(w: Withdrawal): UInt256 =
 func isGenesis*(header: Header): bool =
   header.number == 0'u64 and
     header.parentHash == GENESIS_PARENT_HASH
+
+proc addressToTopic*(address: Address): Topic =
+  var topic: Topic
+  # Address is 20 bytes; place it at the end of the 32-byte topic
+  for i in 0 ..< 20:
+    topic.data[32 - 20 + i] = address.data[i]
+  topic

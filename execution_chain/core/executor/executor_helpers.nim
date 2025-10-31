@@ -104,7 +104,6 @@ proc makeReceipt*(
         rec.eip7807ReceiptType = Eip7807Basic
       rec.authorities = @[]
 
-    # Maintain txCtx bookkeeping for downstream consumers
     vmState.txCtx.txGasUsed = Opt.some(txGasUsed)
     if isCreate:
       vmState.txCtx.contractAddress = Opt.some(contractAddr)

@@ -253,6 +253,10 @@ template chainTo*(c: Computation,
     c.continuation = nil
     after
 
+# Using `proc` as `addLogEntry()` might be `proc` in logging mode
+proc addLogEntry*(c: Computation, log: Log) =
+  c.logEntries.add log
+  
 proc execSelfDestruct*(c: Computation, beneficiary: Address) =
   c.vmState.mutateLedger:
     let localBalance = c.getBalance(c.msg.contractAddress)
@@ -286,12 +290,8 @@ proc execSelfDestruct*(c: Computation, beneficiary: Address) =
         addressToTopic(c.msg.contractAddress),
         addressToTopic(beneficiary)
       ]
-      log.data = localBalance
+      log.data = @(localBalance.toBytesBE())
       c.addLogEntry(log)
-
-# Using `proc` as `addLogEntry()` might be `proc` in logging mode
-proc addLogEntry*(c: Computation, log: Log) =
-  c.logEntries.add log
 
 func merge*(c, child: Computation) =
   c.logEntries.mergeAndReset(child.logEntries)

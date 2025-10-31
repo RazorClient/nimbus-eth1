@@ -44,10 +44,12 @@ type
     versionedHashes*: seq[VersionedHash]
     blobBaseFee*    : UInt256
     # EIP-7919: SSZ receipt context
-    sender*         : Opt[Address]
+    # We need to set these feilds as EthAddress as if we set it as opt[Address] it infers it to be of the type op.opcode.Address
+    # and a normal sender*:address is infered as the type address.Address
+    sender*         : Opt[EthAddress]
     txGasUsed*      : Opt[uint64]
-    contractAddress*: Opt[Address]
-    authorities*    :Opt[seq[Address]]
+    contractAddress*: Opt[EthAddress]
+    authorities*    :Opt[seq[EthAddress]]
     sszReceiptKind* : Opt[SszReceiptKind]
 
   BaseVMState* = ref object of RootObj

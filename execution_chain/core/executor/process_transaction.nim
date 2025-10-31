@@ -55,7 +55,7 @@ proc commitOrRollbackDependingOnGasUsed(
   # header `gasUsed` and the `vmState.cumulativeGasUsed` at a later stage.
   if header.gasLimit < vmState.cumulativeGasUsed + gasUsed:
     vmState.ledger.rollback(accTx)
-    vmState.txCtx.authorities.setLen(0)
+    vmState.txCtx.authorities = Opt.some(newSeq[Address](0))
     err(&"invalid tx: block header gasLimit reached. gasLimit={header.gasLimit}, gasUsed={vmState.cumulativeGasUsed}, addition={gasUsed}")
   else:
     # Accept transaction and collect mining fee.

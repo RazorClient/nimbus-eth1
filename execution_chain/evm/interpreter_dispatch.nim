@@ -83,7 +83,7 @@ proc beforeExecCall(c: Computation) =
         addressToTopic(c.msg.sender),
         addressToTopic(c.msg.contractAddress)
       ]
-      log.data = c.msg.value
+      log.data = @(c.msg.value.toBytesBE())
       c.addLogEntry(log)
 
 func afterExecCall(c: Computation) =
@@ -144,7 +144,7 @@ proc beforeExecCreate(c: Computation): bool =
       addressToTopic(c.msg.sender),
       addressToTopic(c.msg.contractAddress)
     ]
-    log.data = c.msg.value
+    log.data = @(c.msg.value.toBytesBE())
     c.addLogEntry(log)
 
   return false
