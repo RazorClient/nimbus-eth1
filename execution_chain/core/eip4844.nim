@@ -24,7 +24,7 @@ import
 from std/sequtils import mapIt
 
 export
-  kzg,fakeExponential
+  kzg
 
 type
   Bytes64 = array[64, byte]

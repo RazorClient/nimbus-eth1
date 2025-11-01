@@ -14,8 +14,8 @@ import
   web3/execution_types,
   eth/common/eth_types_rlp,
   eth/trie/ordered_trie,
-  ../../common/common,
-  ../../utils/utils
+  ../common/common,
+  ../utils/utils
 
 # ------------------------------------------------------------------------------
 # Private helpers
@@ -94,9 +94,9 @@ func blockHeader*(p: ExecutionPayload,
                   requestsHash: Opt[Hash32],
                   systemLogsRoot: Opt[Hash32],  # EIP-7799
                   com: CommonRef):
-                    Header =
+                    Header {.gcsafe, raises:[RlpError].} =
   let
-    fork = com.toEVMFork(timestamp)
+    fork = com.toEVMFork(p.timestamp.EthTime)
     transactions = ethTxs p.transactions
     withdrawals = ethWithdrawals p.withdrawals
 
@@ -116,8 +116,8 @@ func blockHeader*(p: ExecutionPayload,
     extraData      : ethBlob p.extraData,
     mixHash        : p.prevRandao,
     nonce          : default(Bytes8),
-    baseFeePerGas  : if withdrawals.isSome: calcWithdrawalsRoot(withdrawals.get, fork) else: Opt.none(Hash32),
-    withdrawalsRoot: wdRoot p.withdrawals,
+    baseFeePerGas  : Opt.some(p.baseFeePerGas),
+    withdrawalsRoot: if withdrawals.isSome: Opt.some(calcWithdrawalsRoot(withdrawals.get, fork)) else: Opt.none(Hash32),
     blobGasUsed    : u64(p.blobGasUsed),
     excessBlobGas  : u64(p.excessBlobGas),
     parentBeaconBlockRoot: parentBeaconBlockRoot,

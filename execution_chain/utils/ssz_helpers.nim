@@ -6,11 +6,42 @@ import
   eth/ssz/transaction_ssz as ssz_tx,
   eth/ssz/receipts_ssz as ReceiptsSsz,
   ssz_serialization,
-  ssz_serialization/merkleization
+  ssz_serialization/merkleization,
+  stint
 
 from eth/ssz/transaction_builder import TxBuildError
+from ../constants import MIN_BLOB_GASPRICE
 
 export ssz_serialization, sszcodec
+
+# fakeExponential approximates factor * e ** (num / denom) using a taylor expansion
+# as described in the EIP-4844 spec.
+func fakeExponential(factor, numerator, denominator: UInt256): UInt256 =
+  var
+    i = 1.u256
+    output = 0.u256
+    numeratorAccum = factor * denominator
+
+  while numeratorAccum > 0.u256:
+    output += numeratorAccum
+    numeratorAccum = (numeratorAccum * numerator) div (denominator * i)
+    i = i + 1.u256
+
+  output div denominator
+
+# Standalone blob base fee calculator for SSZ block hash computation
+# Uses default Cancun parameters: updateFraction = 3338477
+# using the one at core/4844 is not possible due to circular imports
+func calcBlobBaseFeeForSSZ*(excessBlobGas: uint64): uint64 =
+  const BLOB_BASE_FEE_UPDATE_FRACTION = 3338477.u256
+
+  let blobBaseFee = fakeExponential(
+    MIN_BLOB_GASPRICE.u256,
+    excessBlobGas.u256,
+    BLOB_BASE_FEE_UPDATE_FRACTION
+  )
+
+  blobBaseFee.truncate(uint64)
 
 # SSZ helper functions for EIP-6465 (transactions), EIP-6466 (receipts), and EIP-7807 (SSZ block structure)
 proc sszCalcTxRoot*(txs: openArray[transactions.Transaction]): Root =
@@ -125,6 +156,11 @@ proc sszCalcSystemLogsRoot*(logs: openArray[receipts.Log]): Root =
 
 
 proc sszCalcBlockHash*(header: headers.Header): Hash32 =
+  ## Calculate SSZ block hash from header
+  ## Automatically computes blob base fee from excessBlobGas
+  let excessBlobGas = header.excessBlobGas.get(0'u64)
+  let blobBaseFee = calcBlobBaseFeeForSSZ(excessBlobGas)
+
   var sszHeader: blocks_ssz.Header
   sszHeader.parent_hash = Root(header.parentHash.data)
   sszHeader.miner = header.coinbase
@@ -150,7 +186,7 @@ proc sszCalcBlockHash*(header: headers.Header): Hash32 =
   sszHeader.withdrawals_root = Root(header.withdrawalsRoot.get.data)
   sszHeader.excess_gas = blocks_ssz.GasAmounts(
     regular: 0,  # Not used in current spec
-    blob: header.excessBlobGas.get
+    blob: excessBlobGas
   )
   sszHeader.parent_beacon_block_root = Root(header.parentBeaconBlockRoot.get.data)
   sszHeader.requests_hash = Bytes32(header.requestsHash.get.data)

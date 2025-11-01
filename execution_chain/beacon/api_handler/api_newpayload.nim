@@ -157,7 +157,7 @@ proc newPayload*(ben: BeaconEngineRef,
     systemLogsRoot = payload.systemLogsRoot
     blk =
       try:
-        ethBlock(payload, beaconRoot, requestsHash)
+        ethBlock(payload, beaconRoot, requestsHash, systemLogsRoot, com)
       except RlpError as e:
         warn "Failed to decode payload",
           error = e.msg
@@ -176,11 +176,11 @@ proc newPayload*(ben: BeaconEngineRef,
   header.validateBlockHash(blockHash, version).isOkOr:
     return error
 
-  if com isEip7919OrLater(timestamp):
+  if com.isEip7919OrLater(timestamp):
     if systemLogsRoot.isNone:
-      return invalidParams("Post-Osaka payload must include systemLogsRoot")
+      return invalidStatus(blockHash, "Post-Osaka payload must include systemLogsRoot")
   elif systemLogsRoot.isSome:
-    return invalidParams("Pre-Osaka payload must not include systemLogsRoot")
+    return invalidStatus(blockHash, "Pre-Osaka payload must not include systemLogsRoot")
 
   # If we already have the block locally, ignore the entire execution and just
   # return a fake success.
