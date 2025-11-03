@@ -138,7 +138,7 @@ proc traceTransactionImpl(
     vmState = BaseVMState.new(parent, header, com, txFrame, storeSlotHash = true)
     ledger = vmState.ledger
 
-  doAssert(transactions.calcTxRoot == header.txRoot)
+  doAssert(calcTxRoot(transactions, vmState.fork) == header.txRoot)
   doAssert(transactions.len != 0)
 
   var
@@ -271,7 +271,7 @@ proc traceBlockImpl(
     vmState = BaseVMState.new(parent, header, com, txFrame, tracerInst, storeSlotHash = true)
 
   if header.txRoot == EMPTY_ROOT_HASH: return newJNull()
-  doAssert(blk.transactions.calcTxRoot == header.txRoot)
+  doAssert(calcTxRoot(blk.transactions, vmState.fork) == header.txRoot)
   doAssert(blk.transactions.len != 0)
 
   var gasUsed = GasInt(0)

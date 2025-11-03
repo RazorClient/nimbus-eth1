@@ -193,7 +193,7 @@ proc assembleBlock*(
         blobsBundle.proofs.add p
       for blob in tx.blobsBundle.blobs:
         blobsBundle.blobs.add blob
-  blk.header.transactionsRoot = calcTxRoot(blk.txs)
+  blk.header.transactionsRoot = calcTxRoot(blk.txs, com.toEVMFork(blk.header.timestamp))
 
   if com.isShanghaiOrLater(blk.header.timestamp):
     blk.withdrawals = Opt.some(xp.withdrawals)

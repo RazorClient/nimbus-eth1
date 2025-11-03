@@ -93,7 +93,7 @@ proc processTransactions*(
   vmState.receipts.setLen(if skipReceipts: 0 else: transactions.len)
   vmState.cumulativeGasUsed = 0
   vmState.allLogs = @[]
-   # EIP-7799: reset system logs and fee accumulator per block
+  # EIP-7799: reset system logs and fee accumulator per block
   vmState.systemLogs = @[]
   vmState.priorityFeesAcc = 0.u256
 
@@ -132,7 +132,9 @@ proc procBlkPreamble(
       db.applyDAOHardFork()
 
   if not skipValidation: # Expensive!
-    if blk.transactions.calcTxRoot != header.txRoot:
+   # Not sure if this might cause problems tho
+    let computedTxRoot = calcTxRoot(blk.transactions, vmState.fork)
+    if computedTxRoot != header.txRoot:
       return err("Mismatched txRoot")
 
   if com.isOsakaOrLater(header.timestamp):

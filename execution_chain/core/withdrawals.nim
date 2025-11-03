@@ -10,7 +10,10 @@
 
 {.push raises: [].}
 
-import results, ../common/common
+import
+  results,
+  ../common/common,
+  ../utils/utils
 
 # https://eips.ethereum.org/EIPS/eip-4895
 proc validateWithdrawals*(
@@ -22,7 +25,8 @@ proc validateWithdrawals*(
     elif withdrawals.isNone:
       return err("Post-Shanghai block body must have withdrawals")
     else:
-      if withdrawals.get.calcWithdrawalsRoot != header.withdrawalsRoot.get:
+      let fork = com.toEVMFork(header.timestamp)
+      if calcWithdrawalsRoot(withdrawals.get, fork) != header.withdrawalsRoot.get:
         return err("Mismatched withdrawalsRoot blockNumber =" & $header.number)
   else:
     if header.withdrawalsRoot.isSome:

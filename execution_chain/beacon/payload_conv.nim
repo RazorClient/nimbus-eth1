@@ -122,6 +122,7 @@ func blockHeader*(p: ExecutionPayload,
     excessBlobGas  : u64(p.excessBlobGas),
     parentBeaconBlockRoot: parentBeaconBlockRoot,
     requestsHash   : requestsHash,
+    systemLogsRoot : systemLogsRoot,
   )
 
 func blockBody*(p: ExecutionPayload):

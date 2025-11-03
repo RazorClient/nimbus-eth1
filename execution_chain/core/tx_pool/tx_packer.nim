@@ -19,7 +19,9 @@ import
   stew/byteutils,
   ../../db/ledger,
   ../../common/common,
+  ../../common/eip_constants,
   ../../utils/utils,
+  ../../utils/ssz_helpers,
   ../../constants,
   ../../transaction/call_evm,
   ../../transaction,
@@ -44,6 +46,7 @@ type
     blockValue: UInt256
     stateRoot: Hash32
     receiptsRoot: Hash32
+    systemLogsRoot: Root
     logsBloom: Bloom
     packedTxs: seq[TxItemRef]
     withdrawalReqs: seq[byte]
@@ -113,7 +116,10 @@ proc runTxCommit(pst: var TxPacker; item: TxItemRef; callResult: LogResult, xp: 
     gasTip  = item.tx.tip(pst.baseFee)
 
   let reward = callResult.gasUsed.u256 * gasTip.u256
-  vmState.ledger.addBalance(xp.feeRecipient, reward)
+  if vmState.fork >= FkEip7919:
+    vmState.priorityFeesAcc = vmState.priorityFeesAcc + reward
+  else:
+    vmState.ledger.addBalance(xp.feeRecipient, reward)
   pst.blockValue += reward
 
   # Update receipts sequence
@@ -141,6 +147,8 @@ proc vmExecInit(xp: TxPoolRef): Result[TxPacker, string] =
     blockValue: 0.u256,
     stateRoot: xp.vmState.parent.stateRoot,
   )
+  packer.vmState.systemLogs = @[]
+  packer.vmState.priorityFeesAcc = 0.u256
 
   # EIP-4788
   if xp.nextFork >= FkCancun:
@@ -223,10 +231,30 @@ proc vmExecCommit(pst: var TxPacker, xp: TxPoolRef): Result[void, string] =
     vmState = pst.vmState
     ledger = vmState.ledger
 
+  if vmState.fork >= FkEip7919 and vmState.priorityFeesAcc > 0.u256:
+    ledger.addBalance(xp.feeRecipient, vmState.priorityFeesAcc)
+    var feeLog: Log
+    feeLog.address = SYSTEM_ADDRESS
+    feeLog.topics = @[
+      Topic(EIP7799PriorityRewardsTopic),
+      addressToTopic(xp.feeRecipient)
+    ]
+    feeLog.data = @(vmState.priorityFeesAcc.toBytesBE())
+    vmState.systemLogs.add(feeLog)
+
   # EIP-4895
   if vmState.fork >= FkShanghai:
     for withdrawal in xp.withdrawals:
       ledger.addBalance(withdrawal.address, withdrawal.weiAmount)
+      if vmState.fork >= FkEip7919:
+        var wLog: Log
+        wLog.address = SYSTEM_ADDRESS
+        wLog.topics = @[
+          Topic(EIP7799WithdrawalTopic),
+          addressToTopic(withdrawal.address)
+        ]
+        wLog.data = @(withdrawal.weiAmount.toBytesBE())
+        vmState.systemLogs.add(wLog)
 
   # EIP-6110, EIP-7002, EIP-7251
   if vmState.fork >= FkPrague:
@@ -240,8 +268,13 @@ proc vmExecCommit(pst: var TxPacker, xp: TxPoolRef): Result[void, string] =
   # Update flexi-array, set proper length
   vmState.receipts.setLen(pst.packedTxs.len)
 
-  pst.receiptsRoot = vmState.receipts.calcReceiptsRoot
+  pst.receiptsRoot = calcReceiptsRoot(vmState.receipts, vmState.fork)
   pst.logsBloom = vmState.receipts.createBloom
+  pst.systemLogsRoot =
+    if vmState.fork >= FkEip7919:
+      sszCalcSystemLogsRoot(vmState.systemLogs)
+    else:
+      default(Root)
   pst.stateRoot = vmState.ledger.getStateRoot()
   ok()
 
@@ -293,7 +326,7 @@ proc assembleHeader*(pst: TxPacker, xp: TxPoolRef): Header =
     )
 
   if com.isShanghaiOrLater(xp.timestamp):
-    result.withdrawalsRoot = Opt.some(calcWithdrawalsRoot(xp.withdrawals))
+    result.withdrawalsRoot = Opt.some(calcWithdrawalsRoot(xp.withdrawals, vmState.fork))
 
   if com.isCancunOrLater(xp.timestamp):
     result.parentBeaconBlockRoot = Opt.some(xp.parentBeaconBlockRoot)
@@ -307,6 +340,9 @@ proc assembleHeader*(pst: TxPacker, xp: TxPoolRef): Header =
       (CONSOLIDATION_REQUEST_TYPE, pst.consolidationReqs)
     ])
     result.requestsHash = Opt.some(requestsHash)
+
+  if vmState.fork >= FkEip7919:
+    result.systemLogsRoot = Opt.some(pst.systemLogsRoot)
 
 func blockValue*(pst: TxPacker): UInt256 =
   pst.blockValue
