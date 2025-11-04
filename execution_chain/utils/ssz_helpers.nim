@@ -31,7 +31,7 @@ func fakeExponential(factor, numerator, denominator: UInt256): UInt256 =
 
 # Standalone blob base fee calculator for SSZ block hash computation
 # Uses default Cancun parameters: updateFraction = 3338477
-# using the one at core/4844 is not possible due to circular imports
+# not  using the one at core/4844 is not possible due to circular imports
 func calcBlobBaseFeeForSSZ*(excessBlobGas: uint64): uint64 =
   const BLOB_BASE_FEE_UPDATE_FRACTION = 3338477.u256
 
@@ -60,6 +60,7 @@ proc sszCalcTxRoot*(txs: openArray[transactions.Transaction]): Root =
 
   Root(sszTxs.hash_tree_root().data)
 
+# Consune the new EIP-7807 stored receipt format and then typecast them into the varinats of ssz receipts as defined at nim-eth
 proc sszCalcReceiptsRoot*(receipts: openArray[StoredReceipt]): Root =
   if receipts.len == 0:
     return default(Root)
@@ -157,7 +158,6 @@ proc sszCalcSystemLogsRoot*(logs: openArray[receipts.Log]): Root =
 
 proc sszCalcBlockHash*(header: headers.Header): Hash32 =
   ## Calculate SSZ block hash from header
-  ## Automatically computes blob base fee from excessBlobGas
   let excessBlobGas = header.excessBlobGas.get(0'u64)
   let blobBaseFee = calcBlobBaseFeeForSSZ(excessBlobGas)
 

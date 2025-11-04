@@ -90,6 +90,7 @@ proc makeReceipt*(
         else:
           generateAddress(sender, nonce)
     elif txType == TxEip7702:
+      # Really doesn't matter as we will not use it
       contractAddr = destination
     rec.contactAddress = contractAddr
 
@@ -126,12 +127,14 @@ proc makeReceipt*(
     vmState.txCtx.txGasUsed = Opt.none(uint64)
     vmState.txCtx.contractAddress = Opt.none(Address)
     vmState.txCtx.sszReceiptKind = Opt.none(SszReceiptKind)
+    
   # Authorities for non-SetCode receipts should always be empty
   if rec.eip7807ReceiptType != Eip7807SetCode and rec.authorities.len != 0:
     rec.authorities.setLen(0)
 
   if vmState.fork >= FkEip7919:
     if rec.eip7807ReceiptType != Eip7807SetCode:
+      # Clear all the authorities for non-SetCode receipts
       vmState.txCtx.authorities = Opt.none(seq[Address])
 
   rec
