@@ -546,6 +546,7 @@ func chainConfigForNetwork*(id: NetworkId): ChainConfig =
       shanghaiTime:        Opt.some(1_681_338_455.EthTime),  # 2023-04-12 10:27:35 UTC
       cancunTime:          Opt.some(1_710_338_135.EthTime),  # 2024-03-13 13:55:35 UTC
       pragueTime:          Opt.some(1_746_612_311.EthTime),  # 2025-05-07 10:05:11 UTC
+      eip7919Time:         Opt.none(EthTime),
       depositContractAddress: Opt.some(MAINNET_DEPOSIT_CONTRACT_ADDRESS),
       blobSchedule:        defaultBlobSchedule(),
     )
@@ -577,6 +578,7 @@ func chainConfigForNetwork*(id: NetworkId): ChainConfig =
       osakaTime:           Opt.some(1_760_427_360.EthTime), # Tuesday, 14 October 2025 07:36:00
       bpo1Time:            Opt.some(1_761_017_184.EthTime), # Tuesday, 21 October 2025 03:26:24
       bpo2Time:            Opt.some(1_761_607_008.EthTime), # Monday, 27 October 2025 23:16:48
+      eip7919Time:         Opt.none(EthTime),
       depositContractAddress: Opt.some(SEPOLIANET_DEPOSIT_CONTRACT_ADDRESS),
       blobSchedule:        defaultBlobSchedule(),
     )
@@ -603,6 +605,7 @@ func chainConfigForNetwork*(id: NetworkId): ChainConfig =
       osakaTime:           Opt.some(1_761_677_592.EthTime), # Tuesday, 28 October 2025 18:53:12
       bpo1Time:            Opt.some(1_762_365_720.EthTime), # Wednesday, 5 November 2025 18:02:00
       bpo2Time:            Opt.some(1_762_955_544.EthTime), # Wednesday, 12 November 2025 13:52:24
+      eip7919Time:         Opt.none(EthTime),
       depositContractAddress: Opt.some(HOODI_DEPOSIT_CONTRACT_ADDRESS),
       blobSchedule:        defaultBlobSchedule(),
     )

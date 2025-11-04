@@ -89,6 +89,12 @@ proc initConf(envFork: HardFork): ExecutionClientConf =
   if envFork >= Osaka:
     cc.osakaTime = Opt.some(0.EthTime)
 
+  if envFork >= Amsterdam:
+    cc.amsterdamTime = Opt.some(0.EthTime)
+
+  if envFork >= Eip7919:
+    cc.eip7919Time = Opt.some(0.EthTime)
+
   config.networkParams.genesis.alloc[recipient] = GenesisAccount(code: contractCode)
   config
 
@@ -192,7 +198,12 @@ proc createPooledTransactionWithBlob(
     nonce: nonce,
   )
 
-  makeTx(params, tc)
+  try:
+    return makeTx(params, tc)
+  except UnsupportedRlpError as e:
+    checkpoint("Unexpected blob tx encoding failure: " & e.msg)
+    fail()
+    return default(PooledTransaction)
 
 proc createPooledTransactionWithBlob7594(
     mx: TxSender,
@@ -219,7 +230,12 @@ proc createPooledTransactionWithBlob7594(
     nonce: nonce,
   )
 
-  makeTx(params, tc)
+  try:
+    return makeTx(params, tc)
+  except UnsupportedRlpError as e:
+    checkpoint("Unexpected blob7594 tx encoding failure: " & e.msg)
+    fail()
+    return default(PooledTransaction)
 
 proc makeTx(
   mx: TxSender,
@@ -233,7 +249,13 @@ proc makeTx(
       recipient: Opt.some(recipient),
       amount: amount,
     )
-  mx.makeTx(tc, acc, nonce)
+
+  try:
+    return mx.makeTx(tc, acc, nonce)
+  except UnsupportedRlpError as e:
+    checkpoint("Unexpected base tx encoding failure: " & e.msg)
+    fail()
+    return default(PooledTransaction)
 
 suite "TxPool test suite":
   let
@@ -716,15 +738,45 @@ suite "TxPool test suite":
       let
         mx = env.sender
         acc = mx.getAccount(27)
+
+      var ptx: PooledTransaction
+      try:
         ptx = mx.makeTx(tc, 0)
+      except UnsupportedRlpError as e:
+        checkpoint("Unexpected tx encoding failure: " & e.msg)
+        fail()
+        return (default(PooledTransaction), default(PooledTransaction))
+
+      var txSize: int
+      try:
         txSize = getEncodedLength(ptx.tx)
+      except UnsupportedRlpError as e:
+        checkpoint("Unexpected tx encoding length failure: " & e.msg)
+        fail()
+        return (default(PooledTransaction), default(PooledTransaction))
+
+      let
         maxTxLengthWithoutData = txSize - largeDataLength
         maxTxDataLength = TX_MAX_SIZE - maxTxLengthWithoutData
 
       tc.payload = newSeq[byte](maxTxDataLength)
-      let ptx1 = mx.makeTx(tc, acc, nonce)
+      var ptx1: PooledTransaction
+      try:
+        ptx1 = mx.makeTx(tc, acc, nonce)
+      except UnsupportedRlpError as e:
+        checkpoint("Unexpected tx encoding failure: " & e.msg)
+        fail()
+        return (default(PooledTransaction), default(PooledTransaction))
+
       tc.payload = newSeq[byte](maxTxDataLength + 1)
-      let ptx2 = mx.makeTx(tc, acc, nonce)
+      var ptx2: PooledTransaction
+      try:
+        ptx2 = mx.makeTx(tc, acc, nonce)
+      except UnsupportedRlpError as e:
+        checkpoint("Unexpected tx encoding failure: " & e.msg)
+        fail()
+        return (default(PooledTransaction), default(PooledTransaction))
+
       (ptx1, ptx2)
 
     let

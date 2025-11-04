@@ -14,6 +14,7 @@ import
     test_coredb,
     test_difficulty,
     test_engine_api,
+    test_eip7919,
     test_evm_support,
     test_evm_errors,
     test_async_evm,

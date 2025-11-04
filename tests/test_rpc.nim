@@ -200,6 +200,12 @@ proc setupEnv(envFork: HardFork = MergeFork): TestEnv =
     conf.networkParams.config.bpo1Time = Opt.some(3805701325.EthTime)
     conf.networkParams.config.bpo2Time = Opt.some(3805801325.EthTime)
 
+  if envFork >= Amsterdam:
+    conf.networkParams.config.amsterdamTime = Opt.some(0.EthTime)
+
+  if envFork >= Eip7919:
+    conf.networkParams.config.eip7919Time = Opt.some(0.EthTime)
+
   let
     com   = setupCom(conf)
     chain = ForkedChainRef.init(com)

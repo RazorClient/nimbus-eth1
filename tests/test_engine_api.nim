@@ -87,6 +87,12 @@ proc setupEnv(envFork: HardFork = MergeFork,
   if envFork >= Prague:
     config.networkParams.config.pragueTime = Opt.some(0.EthTime)
 
+  if envFork >= Amsterdam:
+    config.networkParams.config.amsterdamTime = Opt.some(0.EthTime)
+
+  if envFork >= Eip7919:
+    config.networkParams.config.eip7919Time = Opt.some(0.EthTime)
+
   let
     com   = setupCom(config)
     chain = ForkedChainRef.init(com, enableQueue = true)

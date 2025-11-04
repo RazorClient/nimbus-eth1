@@ -171,7 +171,14 @@ proc getBlockBodies*(ctx: EthWireRef,
         trace "handlers.getBlockBodies: blockBody older than expiry limit", blockHash
         continue
 
-    totalBytes += getEncodedLength(blk.body)
+    let encodedLen =
+      try:
+        getEncodedLength(blk.body)
+      except UnsupportedRlpError:
+        trace "handlers.getBlockBodies: unsupported RLP in block body", blockHash
+        continue
+
+    totalBytes += encodedLen
     list.add blk.body
 
     if list.len >= MAX_BODIES_SERVE or

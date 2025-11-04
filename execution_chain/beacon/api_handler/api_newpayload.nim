@@ -178,9 +178,9 @@ proc newPayload*(ben: BeaconEngineRef,
 
   if com.isEip7919OrLater(timestamp):
     if systemLogsRoot.isNone:
-      return invalidStatus(blockHash, "Post-Osaka payload must include systemLogsRoot")
+      return invalidStatus(blockHash, "Post-Eip7919 payload must include systemLogsRoot")
   elif systemLogsRoot.isSome:
-    return invalidStatus(blockHash, "Pre-Osaka payload must not include systemLogsRoot")
+    return invalidStatus(blockHash, "Pre-Eip7919 payload must not include systemLogsRoot")
 
   # If we already have the block locally, ignore the entire execution and just
   # return a fake success.

@@ -80,7 +80,8 @@ proc forkchoiceUpdated*(client: RpcClient,
   of Version.V1: return client.forkchoiceUpdatedV1(update, attr.V1)
   of Version.V2: return client.forkchoiceUpdatedV2(update, attr)
   of Version.V3: return client.forkchoiceUpdatedV3(update, attr)
-  of Version.V4, Version.V5: discard
+  of Version.V4, Version.V5, Version.V6:
+    return client.forkchoiceUpdatedV3(update, attr)
 
 proc getPayloadV1*(client: RpcClient, payloadId: Bytes8): Result[ExecutionPayloadV1, string] =
   wrapTrySimpleRes:
@@ -98,19 +99,29 @@ proc getPayloadV4*(client: RpcClient, payloadId: Bytes8): Result[GetPayloadV4Res
   wrapTrySimpleRes:
     client.engine_getPayloadV4(payloadId)
 
+proc getPayloadV5*(client: RpcClient, payloadId: Bytes8): Result[GetPayloadV5Response, string] =
+  wrapTrySimpleRes:
+    client.engine_getPayloadV5(payloadId)
+
+proc getPayloadV6*(client: RpcClient, payloadId: Bytes8): Result[GetPayloadV6Response, string] =
+  wrapTrySimpleRes:
+    client.engine_getPayloadV6(payloadId)
+
 proc getPayload*(client: RpcClient,
                  version: Version,
                  payloadId: Bytes8): Result[GetPayloadResponse, string] =
-  if version == Version.V4:
+  if version == Version.V6:
+    let x = client.getPayloadV6(payloadId).valueOr:
+      return err(error)
+    ok(getPayloadResponse(x))
+  elif version == Version.V5:
+    let x = client.getPayloadV5(payloadId).valueOr:
+      return err(error)
+    ok(getPayloadResponse(x))
+  elif version == Version.V4:
     let x = client.getPayloadV4(payloadId).valueOr:
       return err(error)
-    ok(GetPayloadResponse(
-      executionPayload: executionPayload(x.executionPayload),
-      blockValue: Opt.some(x.blockValue),
-      blobsBundle: Opt.some(x.blobsBundle),
-      shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder),
-      executionRequests: Opt.some(x.executionRequests),
-    ))
+    ok(getPayloadResponse(x))
   elif version == Version.V3:
     let x = client.getPayloadV3(payloadId).valueOr:
       return err(error)
@@ -212,7 +223,7 @@ proc newPayload*(client: RpcClient,
     return client.newPayloadV3(payload.basePayload,
       payload.versionedHashes,
       payload.beaconRoot)
-  of Version.V4, Version.V5:   # Osaka doesn't define any new newPayloadV5
+  of Version.V4, Version.V5, Version.V6:
     return client.newPayloadV4(payload.basePayload,
       payload.versionedHashes,
       payload.beaconRoot,

@@ -15,6 +15,7 @@ import
   results,
   ../../common/common,
   ../../common/evmforks,
+  ../../common/eip_constants,
   ../../db/ledger,
   ../../transaction/call_evm,
   ../../transaction/call_common,
@@ -130,6 +131,12 @@ proc processTransactionImpl(
       if tmp.isErr():
         err(tmp.error)
       else:
+        if vmState.fork >= FkEip7919:
+          for logEntry in callResult.logEntries:
+            if logEntry.address == SYSTEM_ADDRESS and
+               logEntry.topics.len > 0 and
+               logEntry.topics[0] == Topic(EIP7708Magic):
+              vmState.systemLogs.add(logEntry)
         ok(move(callResult))
     else:
       err(txRes.error)
