@@ -12,6 +12,7 @@
 
 import
   std/strformat,
+  chronicles,
   results,
   ../../common/common,
   ../../common/evmforks,
@@ -137,6 +138,10 @@ proc processTransactionImpl(
                logEntry.topics.len > 0 and
                logEntry.topics[0] == Topic(EIP7708Magic):
               vmState.systemLogs.add(logEntry)
+              trace "EIP-7708 system log captured",
+                logCount = vmState.systemLogs.len,
+                topic0 = logEntry.topics[0],
+                dataLen = logEntry.data.len
         ok(move(callResult))
     else:
       err(txRes.error)

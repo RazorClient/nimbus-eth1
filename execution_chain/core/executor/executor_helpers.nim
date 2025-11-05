@@ -12,6 +12,7 @@
 
 import
   eth/bloom,
+  chronicles,
   results,
   stew/assign2,
   ../../db/ledger,
@@ -74,6 +75,12 @@ proc makeReceipt*(
 
   # Default to legacy behaviour unless the SSZ receipts fork is active
   if vmState.fork >= FkEip7919:
+    trace "EIP-7919 receipt conversion start",
+      fork = vmState.fork,
+      txType = txType,
+      isCreate,
+      isSetCode = (txType == TxEip7702)
+
     # All post-fork stored receipts use the EIP-7807 typed format
     rec.receiptType = Eip7807Receipt
 
@@ -117,6 +124,12 @@ proc makeReceipt*(
       vmState.txCtx.sszReceiptKind = Opt.some(SszCreate)
     else:
       vmState.txCtx.sszReceiptKind = Opt.some(SszBasic)
+
+    trace "EIP-7919 receipt conversion done",
+      gasUsed = txGasUsed,
+      contractAddr = contractAddr,
+      authoritiesLen = rec.authorities.len,
+      receiptVariant = rec.eip7807ReceiptType
   else:
     rec.receiptType = txType
     rec.eip7807ReceiptType = Eip7807Basic
@@ -127,7 +140,7 @@ proc makeReceipt*(
     vmState.txCtx.txGasUsed = Opt.none(uint64)
     vmState.txCtx.contractAddress = Opt.none(Address)
     vmState.txCtx.sszReceiptKind = Opt.none(SszReceiptKind)
-    
+
   # Authorities for non-SetCode receipts should always be empty
   if rec.eip7807ReceiptType != Eip7807SetCode and rec.authorities.len != 0:
     rec.authorities.setLen(0)

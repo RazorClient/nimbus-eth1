@@ -177,6 +177,10 @@ proc newPayload*(ben: BeaconEngineRef,
     return error
 
   if com.isEip7919OrLater(timestamp):
+    trace "EIP-7919 validations active",
+      blockHash = blockHash.short,
+      apiVersion = apiVersion,
+      payloadTimestamp = timestamp
     if systemLogsRoot.isNone:
       return invalidStatus(blockHash, "Post-Eip7919 payload must include systemLogsRoot")
   elif systemLogsRoot.isSome:

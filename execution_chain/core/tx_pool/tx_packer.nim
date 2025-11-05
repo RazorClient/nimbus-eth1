@@ -15,6 +15,7 @@
 {.push raises: [].}
 
 import
+  chronicles,
   stew/sorted_set,
   stew/byteutils,
   ../../db/ledger,
@@ -275,6 +276,11 @@ proc vmExecCommit(pst: var TxPacker, xp: TxPoolRef): Result[void, string] =
       sszCalcSystemLogsRoot(vmState.systemLogs)
     else:
       default(Root)
+  if vmState.fork >= FkEip7919:
+    let systemLogsRootStr = $pst.systemLogsRoot
+    trace "EIP-7919 tx packer system logs root",
+      logCount = vmState.systemLogs.len,
+      systemLogsRoot = systemLogsRootStr
   pst.stateRoot = vmState.ledger.getStateRoot()
   ok()
 

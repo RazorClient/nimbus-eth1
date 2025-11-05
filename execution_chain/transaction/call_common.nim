@@ -11,6 +11,7 @@
 import
   eth/common/eth_types, stint,
   chronos,
+  chronicles,
   results,
   ../evm/[types, state],
   ../evm/[message, precompiles, internals, interpreter_dispatch],
@@ -114,6 +115,10 @@ proc preExecComputation(vmState: BaseVMState, call: CallParams): int64 =
     var auths = vmState.txCtx.authorities.get(@[])
     auths.add(authority)
     vmState.txCtx.authorities = Opt.some(auths)
+    trace "EIP-7702 authority accepted",
+      authority = authority,
+      delegatingTo = auth.address,
+      sender = call.sender
 
   gasRefund
 

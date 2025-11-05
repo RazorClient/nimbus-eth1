@@ -92,7 +92,6 @@ proc sszCalcReceiptsRoot*(receipts: openArray[StoredReceipt]): Root =
           setcode: ReceiptsSsz.SetCodeReceipt(
             `from`: sender,
             gas_used: gasUsed,
-            contract_address: rec.contactAddress,
             logs: sszLogs,
             status: rec.status,
             authorities: rec.authorities
@@ -115,7 +114,6 @@ proc sszCalcReceiptsRoot*(receipts: openArray[StoredReceipt]): Root =
           basic: ReceiptsSsz.BasicReceipt(
             `from`: sender,
             gas_used: gasUsed,
-            contract_address: default(Address),
             logs: sszLogs,
             status: rec.status
           )

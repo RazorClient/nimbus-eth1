@@ -213,7 +213,13 @@ proc procBlkPreamble(
 
   # EIP-7799: Validate systemLogsRoot
   if vmState.fork >= FkEip7919:
+    trace "EIP-7919 system log summary",
+      logCount = vmState.systemLogs.len,
+      priorityFeesAcc = vmState.priorityFeesAcc
+
     let computedRoot = sszCalcSystemLogsRoot(vmState.systemLogs)
+    trace "EIP-7919 system logs root computed"
+
     if header.systemLogsRoot.isSome:
       if computedRoot != header.systemLogsRoot.get:
         debug "systemLogsRoot mismatch",
