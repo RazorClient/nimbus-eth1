@@ -222,7 +222,7 @@ proc populateReceipt*(rec: StoredReceipt, gasUsed: GasInt, tx: Transaction,
   if rec.authorities.len > 0:
     res.authorities = Opt.some(rec.authorities)
   elif rec.eip7807ReceiptType == Eip7807SetCode:
-    res.authorities = Opt.some(@[])
+    res.authorities = Opt.some(newSeq[Address](0))
 
   for log in receipt.logs:
     # TODO: Work everywhere with either `Hash32` as topic or `array[32, byte]`
