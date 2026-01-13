@@ -395,6 +395,41 @@ type
       desc: "Save performance statistics to CSV"
       name: "debug-csv-stats".}: Option[string]
 
+    # TODO validation and storage options should be made non-hidden when the
+    #      UX has stabilised and era1 storage is in the app
+    validation* {.
+      hidden
+      desc: "Enable per-chunk validation"
+      defaultValue: false
+      name: "debug-validation".}: bool
+
+    fullValidation* {.
+      hidden
+      desc: "Enable full per-block validation (slow)"
+      defaultValue: false
+      name: "debug-full-validation".}: bool
+
+    storeBodies* {.
+      hidden
+      desc: "Store block blodies in database"
+      defaultValue: false
+      name: "debug-store-bodies".}: bool
+
+    # TODO this option should probably only cover the redundant parts, ie
+    #      those that are in era1 files - era files presently do not store
+    #      receipts
+    storeReceipts* {.
+      hidden
+      desc: "Store receipts in database"
+      defaultValue: false
+      name: "debug-store-receipts".}: bool
+
+    storeSlotHashes* {.
+      hidden
+      desc: "Store reverse slot hashes in database"
+      defaultValue: false
+      name: "debug-store-slot-hashes".}: bool
+
     case cmd* {.
       command
       defaultValue: NimbusCmd.executionClient .}: NimbusCmd
@@ -534,42 +569,6 @@ type
         desc: "Treat bootstrap RLP imports as finalized chain segments"
         defaultValue: true
         name: "debug-bootstrap-finalized" .}: bool
-
-    of NimbusCmd.`import`:
-      # TODO validation and storage options should be made non-hidden when the
-      #      UX has stabilised and era1 storage is in the app
-      validation* {.
-        hidden
-        desc: "Enable per-chunk validation"
-        defaultValue: false
-        name: "debug-validation".}: bool
-
-      fullValidation* {.
-        hidden
-        desc: "Enable full per-block validation (slow)"
-        defaultValue: false
-        name: "debug-full-validation".}: bool
-
-      storeBodies* {.
-        hidden
-        desc: "Store block blodies in database"
-        defaultValue: false
-        name: "debug-store-bodies".}: bool
-
-      # TODO this option should probably only cover the redundant parts, ie
-      #      those that are in era1 files - era files presently do not store
-      #      receipts
-      storeReceipts* {.
-        hidden
-        desc: "Store receipts in database"
-        defaultValue: false
-        name: "debug-store-receipts".}: bool
-
-      storeSlotHashes* {.
-        hidden
-        desc: "Store reverse slot hashes in database"
-        defaultValue: false
-        name: "debug-store-slot-hashes".}: bool
 
     of NimbusCmd.`import-rlp`:
       blocksFile* {.

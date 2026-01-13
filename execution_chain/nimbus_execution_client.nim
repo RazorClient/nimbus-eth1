@@ -407,11 +407,8 @@ proc main*(config = makeConfig(), nimbus = NimbusNode(nil)) {.noinline.} =
         quit(QuitFailure)
 
       if runArchiveImport:
-        debug "Starting archive import",
-          era1Dir = config.era1Dir,
-          eraDir = config.eraDir
-        let importConfig = makeStartupImportConfig(config)
-        importBlocks(importConfig, com)
+        debug "Starting archive import",era1Dir = config.era1Dir,eraDir = config.eraDir
+        importBlocks(config, com)
 
       if runRlpImport:
         var files: seq[string]
