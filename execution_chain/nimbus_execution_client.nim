@@ -388,7 +388,7 @@ proc main*(config = makeConfig(), nimbus = NimbusNode(nil)) {.noinline.} =
 
   case config.cmd
   of NimbusCmd.`import`:
-    importBlocks(config, com, importMode = true)
+    importBlocks(config, com)
   of NimbusCmd.`import - rlp`:
     try:
       waitFor importRlpBlocks(config, com)
@@ -410,7 +410,8 @@ proc main*(config = makeConfig(), nimbus = NimbusNode(nil)) {.noinline.} =
         debug "Starting archive import",
           era1Dir = config.era1Dir,
           eraDir = config.eraDir
-        importBlocks(config, com, importMode = false)
+        let importConfig = makeStartupImportConfig(config)
+        importBlocks(importConfig, com)
 
       if runRlpImport:
         var files: seq[string]

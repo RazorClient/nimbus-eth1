@@ -378,6 +378,23 @@ type
       defaultValue: false
       name: "stateless-witness-validation" .}: bool
 
+    # Archive import tuning shared between the standalone `import` command
+    # and the automatic archive import executed before startup.
+    maxBlocks* {.
+      desc: "Maximum number of blocks to import"
+      defaultValue: uint64.high()
+      name: "max-blocks" .}: uint64
+
+    chunkSize* {.
+      desc: "Number of blocks per database transaction"
+      defaultValue: 8192
+      name: "chunk-size" .}: uint64
+
+    csvStats* {.
+      hidden
+      desc: "Save performance statistics to CSV"
+      name: "debug-csv-stats".}: Option[string]
+
     case cmd* {.
       command
       defaultValue: NimbusCmd.executionClient .}: NimbusCmd
@@ -519,21 +536,6 @@ type
         name: "debug-bootstrap-finalized" .}: bool
 
     of NimbusCmd.`import`:
-      maxBlocks* {.
-        desc: "Maximum number of blocks to import"
-        defaultValue: uint64.high()
-        name: "max-blocks" .}: uint64
-
-      chunkSize* {.
-        desc: "Number of blocks per database transaction"
-        defaultValue: 8192
-        name: "chunk-size" .}: uint64
-
-      csvStats* {.
-        hidden
-        desc: "Save performance statistics to CSV"
-        name: "debug-csv-stats".}: Option[string]
-
       # TODO validation and storage options should be made non-hidden when the
       #      UX has stabilised and era1 storage is in the app
       validation* {.
@@ -833,4 +835,3 @@ proc makeConfig*(cmdLine = commandLineParams(), ignoreUnknown = false): Executio
 when isMainModule:
   # for testing purpose
   discard makeConfig()
-
