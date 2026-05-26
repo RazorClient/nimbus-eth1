@@ -53,14 +53,19 @@ type
     protocols*: JsonNode   # Protocol-specific data
 
 NodePorts.useDefaultSerializationIn EthJson
+NodePorts.useDefaultSerializationIn EthRpcJson
 NodeInfo.useDefaultSerializationIn EthJson
+NodeInfo.useDefaultSerializationIn EthRpcJson
 PeerNetworkInfo.useDefaultSerializationIn EthJson
+PeerNetworkInfo.useDefaultSerializationIn EthRpcJson
 PeerInfo.useDefaultSerializationIn EthJson
+PeerInfo.useDefaultSerializationIn EthRpcJson
 
 EthJson.automaticSerialization(int, true)
+EthRpcJson.automaticSerialization(int, true)
 
 proc setupCommonRpc*(node: EthereumNode, config: ExecutionClientConf, server: RpcServer) =
-  server.rpc(EthJson):
+  server.rpc(EthRpcJson):
     proc web3_clientVersion(): string =
       result = config.agentString
 
@@ -81,7 +86,7 @@ proc setupCommonRpc*(node: EthereumNode, config: ExecutionClientConf, server: Rp
 proc setupAdminRpc*(nimbus: NimbusNode, config: ExecutionClientConf, server: RpcServer) =
   let node = nimbus.ethNode
 
-  server.rpc(EthJson):
+  server.rpc(EthRpcJson):
     proc admin_nodeInfo(): NodeInfo =
       let
         enode = toENode(node)

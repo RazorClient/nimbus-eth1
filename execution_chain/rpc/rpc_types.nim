@@ -22,20 +22,26 @@ type
   BlockTag* = eth_api_types.RtBlockIdentifier
 
 
-proc writeValue*(
-    w: var JsonWriter[EthJson], val: BlockAccessIndex
+proc writeValue*[F: EthJson | EthRpcJson](
+    w: var JsonWriter[F], val: BlockAccessIndex
 ) {.raises: [IOError].} =
   w.writeValue(val.uint64)
 
-proc readValue*(
-    r: var JsonReader[EthJson], val: var BlockAccessIndex
+proc readValue*[F: EthJson | EthRpcJson](
+    r: var JsonReader[F], val: var BlockAccessIndex
 ) {.raises: [SerializationError, IOError].} =
   val = BlockAccessIndex(r.readValue(uint64))
 
 # Block access list json serialization
 AccountChanges.useDefaultSerializationIn EthJson
+AccountChanges.useDefaultSerializationIn EthRpcJson
 SlotChanges.useDefaultSerializationIn EthJson
+SlotChanges.useDefaultSerializationIn EthRpcJson
 StorageChange.useDefaultSerializationIn EthJson
+StorageChange.useDefaultSerializationIn EthRpcJson
 BalanceChange.useDefaultSerializationIn EthJson
+BalanceChange.useDefaultSerializationIn EthRpcJson
 NonceChange.useDefaultSerializationIn EthJson
+NonceChange.useDefaultSerializationIn EthRpcJson
 CodeChange.useDefaultSerializationIn EthJson
+CodeChange.useDefaultSerializationIn EthRpcJson

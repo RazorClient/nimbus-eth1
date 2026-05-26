@@ -202,7 +202,7 @@ template sign(privateKey: PrivateKey, message: string): seq[byte] =
   @(sign(privateKey, msgData.toBytes()).toRaw())
 
 proc setupServerAPI*(api: ServerAPIRef, server: RpcServer, am: ref AccountsManager) =
-  server.rpc(EthJson):
+  server.rpc(EthRpcJson):
     proc eth_getBalance(data: Address, blockTag: BlockTag): UInt256 {.raises: [ValueError].} =
       ## Returns the balance of the account of given address.
       let
@@ -419,7 +419,7 @@ proc setupServerAPI*(api: ServerAPIRef, server: RpcServer, am: ref AccountsManag
         txFrame = api.chain.txFrame(headerHash)
         # TODO: change 0 to configureable gas cap
         gasUsed = rpcEstimateGas(args, header, headerHash, api.com, txFrame, DEFAULT_RPC_GAS_CAP).valueOr:
-          let data = Opt.some(EthJson.encode(error[1].output.to0xHex()).JsonString)
+          let data = Opt.some(EthRpcJson.encode(error[1].output.to0xHex()).JsonString)
           raise (ref ApplicationError)(
             code: 3,
             msg: $error[1].error,

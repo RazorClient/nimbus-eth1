@@ -24,6 +24,8 @@ import
   ../stateless/[witness_types, witness_generation],
   ../transaction
 
+EthRpcJson.automaticSerialization(int, true)
+
 type
   BadBlock = object
     `block`: BlockObject
@@ -36,10 +38,13 @@ type
     blobCount: int
 
 BadBlock.useDefaultSerializationIn EthJson
+BadBlock.useDefaultSerializationIn EthRpcJson
 
 TestBlockSummary.useDefaultSerializationIn EthJson
+TestBlockSummary.useDefaultSerializationIn EthRpcJson
 
 ExecutionWitness.useDefaultSerializationIn EthJson
+ExecutionWitness.useDefaultSerializationIn EthRpcJson
 
 #type
 #   TraceOptions = object
@@ -78,7 +83,7 @@ proc setupDebugRpc*(com: CommonRef, txPool: TxPoolRef, server: RpcServer) =
     # chainDB = com.db
     chain = txPool.chain
 
-  server.rpc(EthJson):
+  server.rpc(EthRpcJson):
     # proc debug_traceTransaction(data: Hash32, options: Opt[TraceOptions]): JsonNode =
     #   ## The traceTransaction debugging method will attempt to run the transaction in the exact
     #   ## same manner as it was executed on the network. It will replay any transaction that may

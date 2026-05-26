@@ -290,7 +290,7 @@ proc generateBlock(env: var TestEnv) =
   env.txHash = tx1.computeRlpHash
   env.blockHash = blk.header.computeBlockHash
 
-createRpcSigsFromNim(RpcClient, EthJson):
+createRpcSigsFromNim(RpcClient, EthRpcJson):
   proc web3_clientVersion(): string
   proc web3_sha3(data: seq[byte]): Hash32
   proc net_version(): string
@@ -625,6 +625,28 @@ proc rpcMain*() =
       expect JsonRpcError:
         discard await client.eth_getBlockByNumber($1, true)
 
+    test "eth_getBlockByNumber omits null optional fields":
+      let raw = await client.call("eth_getBlockByNumber",
+        %[%"latest", %false], EthRpcJson)
+      let
+        blockJson = parseJson(raw.string)
+        blockObj = EthRpcJson.decode(raw.string, BlockObject)
+
+      check blockObj.isNil.not
+
+      template checkNullField(fieldName: string, fieldValue: untyped) =
+        if fieldValue.isNone:
+          check not blockJson.hasKey(fieldName)
+
+      checkNullField("totalDifficulty", blockObj.totalDifficulty)
+      checkNullField("withdrawals", blockObj.withdrawals)
+      checkNullField("withdrawalsRoot", blockObj.withdrawalsRoot)
+      checkNullField("blobGasUsed", blockObj.blobGasUsed)
+      checkNullField("excessBlobGas", blockObj.excessBlobGas)
+      checkNullField("parentBeaconBlockRoot", blockObj.parentBeaconBlockRoot)
+      checkNullField("requestsHash", blockObj.requestsHash)
+      checkNullField("blockAccessListHash", blockObj.blockAccessListHash)
+
     test "eth_getTransactionByHash":
       let res = await client.eth_getTransactionByHash(env.txHash)
       check res.isNil.not
@@ -675,7 +697,7 @@ proc rpcMain*() =
     test "debug_getRawBlockAccessList":
       try:
         discard await client.call("debug_getRawBlockAccessList",
-          %[%"latest"], EthJson)
+          %[%"latest"], EthRpcJson)
         check false
       except JsonRpcError as exc:
         check "Resource not found" in exc.msg
@@ -683,34 +705,34 @@ proc rpcMain*() =
       # Unknown block tag must raise an error.
       expect JsonRpcError:
         discard await client.call("debug_getRawBlockAccessList",
-          %[%"0xabcdabcd"], EthJson)
+          %[%"0xabcdabcd"], EthRpcJson)
 
     test "eth_getBlockReceipts with EIP-1898 object param":
       # blockHash object form (what go-ethereum's ethclient sends)
       let r1 = await client.call("eth_getBlockReceipts",
-        %[%*{"blockHash": $env.blockHash}], EthJson)
-      let recs1 = EthJson.decode(r1.string, Opt[seq[ReceiptObject]])
+        %[%*{"blockHash": $env.blockHash}], EthRpcJson)
+      let recs1 = EthRpcJson.decode(r1.string, Opt[seq[ReceiptObject]])
       check recs1.isSome
       check recs1.get.len == 2
 
       # blockHash with requireCanonical=false
       let r2 = await client.call("eth_getBlockReceipts",
-        %[%*{"blockHash": $env.blockHash, "requireCanonical": false}], EthJson)
-      let recs2 = EthJson.decode(r2.string, Opt[seq[ReceiptObject]])
+        %[%*{"blockHash": $env.blockHash, "requireCanonical": false}], EthRpcJson)
+      let recs2 = EthRpcJson.decode(r2.string, Opt[seq[ReceiptObject]])
       check recs2.isSome
       check recs2.get.len == 2
 
       # blockNumber object form
       let r3 = await client.call("eth_getBlockReceipts",
-        %[%*{"blockNumber": "0x1"}], EthJson)
-      let recs3 = EthJson.decode(r3.string, Opt[seq[ReceiptObject]])
+        %[%*{"blockNumber": "0x1"}], EthRpcJson)
+      let recs3 = EthRpcJson.decode(r3.string, Opt[seq[ReceiptObject]])
       check recs3.isSome
       check recs3.get.len == 2
 
       # requireCanonical=true should fail
       expect JsonRpcError:
         discard await client.call("eth_getBlockReceipts",
-          %[%*{"blockHash": $env.blockHash, "requireCanonical": true}], EthJson)
+          %[%*{"blockHash": $env.blockHash, "requireCanonical": true}], EthRpcJson)
 
     test "eth_getTransactionReceipt":
       let res = await client.eth_getTransactionReceipt(env.txHash)
@@ -947,8 +969,8 @@ proc rpcMain*() =
 
     test "debug_getRawBlockAccessList - happy path":
       let r = await client.call("debug_getRawBlockAccessList",
-        %[%"latest"], EthJson)
-      let raw = EthJson.decode(r.string, seq[byte])
+        %[%"latest"], EthRpcJson)
+      let raw = EthRpcJson.decode(r.string, seq[byte])
       check raw.len > 0
 
       let bal = ethBlockAccessList(raw)
