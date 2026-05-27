@@ -742,6 +742,27 @@ proc rpcMain*() =
       let res2 = await client.eth_getTransactionReceipt(env.blockHash)
       check res2.isNil
 
+    test "eth_getTransactionReceipt keeps schema nulls":
+      let raw = await client.call("eth_getTransactionReceipt",
+        %[%($env.txHash)], EthRpcJson)
+      let
+        receiptJson = parseJson(raw.string)
+        receiptObj = EthRpcJson.decode(raw.string, ReceiptObject)
+
+      check receiptObj.isNil.not
+      check receiptObj.contractAddress.isNone
+      check receiptJson.hasKey("contractAddress")
+      check receiptJson["contractAddress"].kind == JNull
+
+      check receiptObj.to.isSome
+      check receiptJson.hasKey("to")
+      check receiptJson["to"].kind == JString
+
+      check receiptObj.blobGasUsed.isNone
+      check not receiptJson.hasKey("blobGasUsed")
+      check receiptObj.blobGasPrice.isNone
+      check not receiptJson.hasKey("blobGasPrice")
+
     test "eth_getUncleByBlockHashAndIndex":
       let res = await client.eth_getUncleByBlockHashAndIndex(env.blockHash, w3Qty(0'u64))
       check res.isNil
